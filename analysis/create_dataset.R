@@ -16,17 +16,17 @@ args <- commandArgs(trailingOnly = TRUE)
 rep <- as.numeric(args[1])
 
 ## test run? If so, just perform this on KBAs in USA
-TEST = TRUE
+TEST = FALSE
 
 #get list of allCMIP and select the one for this task
-cmip_files <- list.files("data/CMIP6_for_Amina", pattern = "*.nc", full.names = T)
+cmip_files <- list.files("raw_data/CMIP6_for_Amina", pattern = "*.nc", full.names = T)
 i <- cmip_files[rep]
 file <- brick(i)
 file_source <- str_extract(filename(file), "[^/]*$")
 
 #### extract over all KBAs ----
 #load in KBA
-kbas <- st_read(dsn = paste0(getwd(), "/data/KBA/KBA2020/KBAsGlobal_2020_September_02_POL.shp"), stringsAsFactors = F, crs = 4326) 
+kbas <- st_read(dsn = paste0(getwd(), "/raw_data/KBA/KBA2020/KBAsGlobal_2020_September_02_POL.shp"), stringsAsFactors = F, crs = 4326) 
 if(TEST) kbas <- kbas %>% filter(ISO3 == "USA") %>% slice_head(n = 25)
 
 # Run through temperature brick and extract over the buffers
