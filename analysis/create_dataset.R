@@ -59,7 +59,7 @@ rm(kbas,all_data)
 #### extract over mountainous KBAs (source file to create it pulled from SDG Calculator https://github.com/GMBA-biodiversity/SDG15.4.1_Calculator) ----
 
 #### load in cleaned KBA, and if not source file to make it ----
-kba_loc <- paste0(folder,"/raw_data/KBA2020/KBAsGlobal_2020_September_02_POL_noOverlaps.shp")
+kba_loc <- paste0(getwd(),"/raw_data/KBA2020/KBAsGlobal_2020_September_02_POL_noOverlaps.shp")
 
 if(file.exists(kba_loc)) {
   kbas <- st_read(dsn = kba_loc, stringsAsFactors = F, crs = 4326) 
