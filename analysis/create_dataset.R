@@ -33,19 +33,20 @@ if(sum(st_is_valid(kbas)) < nrow(kbas)) kbas <- st_make_valid(kbas)
 # Run through temperature brick and extract over the buffers
 all_data <- c()
 
-print("starting loop")
 for(j in 1:length(names(file))) {
-  
+  print("1")
   kbas %>% dplyr::select(SitRecID, Country, ISO3, NatName, IntName, 
                          SitArea, AddedDate) %>% 
     mutate(year = getZ(file[[j]]), source = file_source)
-
+  
+  print("2")
   extracted_vals <-  exact_extract(file[[j]], kbas)
   
+  print("3")
   temp$mean_temp <- lapply(extracted_vals, function(x){mean(as.numeric(x$value), na.rm = T)}) %>% unlist()  
   temp$max_temp <- lapply(extracted_vals, function(x){max(as.numeric(x$value), na.rm = T)}) %>% unlist()
   temp$min_temp <- lapply(extracted_vals, function(x){min(as.numeric(x$value), na.rm = T)}) %>% unlist()
-  
+  print("4")
   all_data <- bind_rows(all_data, temp)
   
 }
