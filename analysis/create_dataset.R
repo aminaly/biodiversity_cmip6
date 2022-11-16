@@ -26,8 +26,9 @@ file_source <- str_extract(filename(file), "[^/]*$")
 
 #### extract over all KBAs ----
 #load in KBA
-kbas <- st_read(dsn = paste0(getwd(), "/raw_data/KBA/KBA2020/KBAsGlobal_2020_September_02_POL.shp"), stringsAsFactors = F, crs = 4326) 
+kbas <- st_read(dsn = paste0(getwd(), "/raw_data/KBA2020/KBAsGlobal_2020_September_02_POL.shp"), stringsAsFactors = F, crs = 4326) 
 if(TEST) kbas <- kbas %>% filter(ISO3 == "USA") %>% slice_head(n = 25)
+if(sum(st_is_valid(kbas)) < nrow(kbas)) kbas <- st_make_valid(kbas)
 
 # Run through temperature brick and extract over the buffers
 all_data <- c()
@@ -58,7 +59,7 @@ rm(kbas,all_data)
 #### extract over mountainous KBAs (source file to create it pulled from SDG Calculator https://github.com/GMBA-biodiversity/SDG15.4.1_Calculator) ----
 
 #### load in cleaned KBA, and if not source file to make it ----
-kba_loc <- paste0(folder,"/raw+data/KBA/KBA2020/KBAsGlobal_2020_September_02_POL_noOverlaps.shp")
+kba_loc <- paste0(folder,"/raw_data/KBA2020/KBAsGlobal_2020_September_02_POL_noOverlaps.shp")
 
 if(file.exists(kba_loc)) {
   kbas <- st_read(dsn = kba_loc, stringsAsFactors = F, crs = 4326) 
