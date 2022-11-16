@@ -34,23 +34,18 @@ if(sum(st_is_valid(kbas)) < nrow(kbas)) kbas <- st_make_valid(kbas)
 all_data <- c()
 
 for(j in 1:length(names(file))) {
-  print("1")
-  kbas %>% dplyr::select(SitRecID, Country, ISO3, NatName, IntName, 
+  temp <- kbas %>% dplyr::select(SitRecID, Country, ISO3, NatName, IntName, 
                          SitArea, AddedDate) %>% 
     mutate(year = getZ(file[[j]]), source = file_source)
   
-  print("2")
   extracted_vals <-  exact_extract(file[[j]], kbas)
   
-  print("3")
   temp$mean_temp <- lapply(extracted_vals, function(x){mean(as.numeric(x$value), na.rm = T)}) %>% unlist()  
   temp$max_temp <- lapply(extracted_vals, function(x){max(as.numeric(x$value), na.rm = T)}) %>% unlist()
   temp$min_temp <- lapply(extracted_vals, function(x){min(as.numeric(x$value), na.rm = T)}) %>% unlist()
-  print("4")
   all_data <- bind_rows(all_data, temp)
   
 }
-print("finished")
 
 #save this out to make my life easier
 file_name <- paste0("./biodiversity_cmip6/processed_data/originalkba_cmip_ovl/", file_source, ".rds")
@@ -71,7 +66,6 @@ if(file.exists(kba_loc)) {
   kbas <- st_read(dsn = kba_loc, stringsAsFactors = F, crs = 4326) 
 }
 
-print("fixed kba renaming")
 ## clean up column names and shorten if testing
 coln <- c("SitRecID", "Country", "ISO3", "NatName", "IntName", "SitArea", "IbaStatus",
           "KBAStatus", "AzeStatus", "AddedDate", "ChangeDate", "Source", "DelTxt",
@@ -85,7 +79,7 @@ all_data <- c()
 
 for(j in 1:length(names(file))) {
   
-  kbas %>% dplyr::select(SitRecID, Country, ISO3, NatName, IntName, 
+  temp <- kbas %>% dplyr::select(SitRecID, Country, ISO3, NatName, IntName, 
                          SitArea, AddedDate) %>% 
     mutate(year = getZ(file[[j]]), source = file_source)
   
