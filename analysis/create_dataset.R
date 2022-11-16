@@ -32,7 +32,7 @@ if(sum(st_is_valid(kbas)) < nrow(kbas)) kbas <- st_make_valid(kbas)
 
 # Run through temperature brick and extract over the buffers
 all_data <- c()
-
+print("starting kbas")
 for(j in 1:length(names(file))) {
   temp <- kbas %>% dplyr::select(SitRecID, Country, ISO3, NatName, IntName, 
                          SitArea, AddedDate) %>% 
@@ -46,7 +46,7 @@ for(j in 1:length(names(file))) {
   all_data <- bind_rows(all_data, temp)
   
 }
-
+print("finished")
 #save this out to make my life easier
 file_name <- paste0("./biodiversity_cmip6/processed_data/originalkba_cmip_ovl/", file_source, ".rds")
 saveRDS(all_data, file_name)
@@ -76,7 +76,7 @@ if(TEST) kbas <- kbas %>% filter(ISO3 == "USA") %>% slice_head(n = 25)
 
 #### now extract over these cleaned up KBAs and save ----
 all_data <- c()
-
+print("starting fied kbas")
 for(j in 1:length(names(file))) {
   
   temp <- kbas %>% dplyr::select(SitRecID, Country, ISO3, NatName, IntName, 
@@ -92,6 +92,7 @@ for(j in 1:length(names(file))) {
   all_data <- bind_rows(all_data, temp)
   
 }
+print("finished")
 
 #save this out to make my life easier
 file_name <- paste0("./biodiversity_cmip6/processed_data/cleankba_cmip_ovl/",file_source, ".rds")
