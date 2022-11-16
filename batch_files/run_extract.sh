@@ -5,8 +5,8 @@
 #SBATCH --error=/oak/stanford/groups/omramom/group_members/aminaly/biodiversity_cmip6/outfiles/extractCMIP.err
 #SBATCH --output=/oak/stanford/groups/omramom/group_members/aminaly/biodiversity_cmip6/outfiles/extractCMIP.out
 #SBATCH --time=48:00:00
-#SBATCH --ntasks-per-node=2
-#SBATCH --mem-per-cpu=95GB
+#SBATCH --ntasks-per-node=1
+#SBATCH --mem-per-cpu=120GB
 #SBATCH --mail-type=END,FAIL 
 #SBATCH --mail-user=aminaly@stanford.edu
 #SBATCH -p diffenbaugh
