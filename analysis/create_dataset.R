@@ -33,6 +33,7 @@ if(sum(st_is_valid(kbas)) < nrow(kbas)) kbas <- st_make_valid(kbas)
 # Run through temperature brick and extract over the buffers
 all_data <- c()
 
+print("starting loop")
 for(j in 1:length(names(file))) {
   
   kbas %>% dplyr::select(SitRecID, Country, ISO3, NatName, IntName, 
@@ -48,6 +49,7 @@ for(j in 1:length(names(file))) {
   all_data <- bind_rows(all_data, temp)
   
 }
+print("finished")
 
 #save this out to make my life easier
 file_name <- paste0("./biodiversity_cmip6/processed_data/originalkba_cmip_ovl/", file_source, ".rds")
@@ -68,6 +70,7 @@ if(file.exists(kba_loc)) {
   kbas <- st_read(dsn = kba_loc, stringsAsFactors = F, crs = 4326) 
 }
 
+print("fixed kba renaming")
 ## clean up column names and shorten if testing
 coln <- c("SitRecID", "Country", "ISO3", "NatName", "IntName", "SitArea", "IbaStatus",
           "KBAStatus", "AzeStatus", "AddedDate", "ChangeDate", "Source", "DelTxt",
