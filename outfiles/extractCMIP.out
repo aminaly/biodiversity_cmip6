@@ -1,0 +1,9 @@
+[1] "/oak/stanford/groups/omramom/group_members/aminaly/biodiversity_cmip6"
+Reading layer `KBAsGlobal_2020_September_02_POL' from data source 
+  `/oak/stanford/groups/omramom/group_members/aminaly/biodiversity_cmip6/raw_data/KBA2020/KBAsGlobal_2020_September_02_POL.shp' 
+  using driver `ESRI Shapefile'
+Simple feature collection with 15903 features and 16 fields
+Geometry type: MULTIPOLYGON
+Dimension:     XY
+Bounding box:  xmin: -180 ymin: -79.21161 xmax: 180 ymax: 81.36814
+Geodetic CRS:  WGS 84
