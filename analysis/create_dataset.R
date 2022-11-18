@@ -51,7 +51,7 @@ for(j in 1:length(names(file))) {
 }
 print("finished")
 #save this out to make my life easier
-file_name <- paste0("./biodiversity_cmip6/processed_data/originalkba_cmip_ovl/", file_source, ".rds")
+file_name <- paste0("./processed_data/originalkba_cmip_ovl/", file_source, ".rds")
 saveRDS(all_data, file_name)
 
 ## unload all KBAs and all_data to save memory 
@@ -100,6 +100,6 @@ for(j in 1:length(names(file))) {
 print("finished")
 
 #save this out to make my life easier
-file_name <- paste0("./biodiversity_cmip6/processed_data/cleankba_cmip_ovl/",file_source, ".rds")
+file_name <- paste0("./processed_data/cleankba_cmip_ovl/",file_source, ".rds")
 saveRDS(all_data, file_name)
 
