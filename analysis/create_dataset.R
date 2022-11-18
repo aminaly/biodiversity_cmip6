@@ -30,6 +30,7 @@ kbas <- st_read(dsn = paste0(getwd(), "/raw_data/KBA2020/KBAsGlobal_2020_Septemb
 if(TEST) kbas <- kbas %>% filter(ISO3 == "USA") 
 if(sum(st_is_valid(kbas)) < nrow(kbas)) kbas <- st_make_valid(kbas)
 
+extent(file) <- extent(kbas)
 ## Run through temperature brick and extract over the buffers
 all_data <- c()
 print("starting kbas")
@@ -74,7 +75,9 @@ coln <- c("SitRecID", "Country", "ISO3", "NatName", "IntName", "SitArea", "IbaSt
           "DelGeom", "Shape_Leng", "Shape_Area", "original_area", "kba_notes", 
           "akba", "geometry")
 colnames(kbas) <- coln
-if(TEST) kbas <- kbas %>% filter(ISO3 == "USA") %>% slice_head(n = 25)
+if(TEST) kbas <- kbas %>% filter(ISO3 == "USA") 
+
+extent(file) <- extent(kbas)
 
 #### now extract over these cleaned up KBAs and save ----
 all_data <- c()
@@ -84,10 +87,12 @@ for(j in 1:length(names(file))) {
                                  SitArea, AddedDate) %>% 
     mutate(year = getZ(file[[j]]), source = file_source)
   
-  temp <- temp %>%
-    mutate(mean_temp = raster::extract(file[[j]], temp, fun = mean)) %>%
-    mutate(max_temp = raster::extract(file[[j]], temp, fun = max)) %>%
-    mutate(min_temp = raster::extract(file[[j]], temp, fun = min))
+  ## make sure the layers align
+  extent(file[[j]]) <- extent(kbas)
+  
+  ev <- exact_extract(file[[j]], kbas, c("mean", "min", "max"))
+  
+  temp <- cbind(temp, ev)
   
   all_data <- rbind(all_data, temp)
   
