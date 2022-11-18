@@ -16,7 +16,7 @@ args <- commandArgs(trailingOnly = TRUE)
 rep <- as.numeric(args[1])
 
 ## test run? If so, just perform this on KBAs in USA
-TEST <- FALSE
+TEST <- TRUE
 
 #get list of allCMIP and select the one for this task
 cmip_files <- list.files("raw_data/CMIP6_for_Amina", pattern = "*.nc", full.names = T)
@@ -27,10 +27,10 @@ file_source <- str_extract(filename(file), "[^/]*$")
 #### extract over all KBAs ----
 #load in KBA
 kbas <- st_read(dsn = paste0(getwd(), "/raw_data/KBA2020/KBAsGlobal_2020_September_02_POL_valid.shp"), stringsAsFactors = F) 
-if(TEST) kbas <- kbas %>% filter(ISO3 == "USA") %>% slice_head(n = 25)
+if(TEST) kbas <- kbas %>% filter(ISO3 == "USA") 
 if(sum(st_is_valid(kbas)) < nrow(kbas)) kbas <- st_make_valid(kbas)
 
-# Run through temperature brick and extract over the buffers
+## Run through temperature brick and extract over the buffers
 all_data <- c()
 print("starting kbas")
 for(j in 1:length(names(file))) {
@@ -38,10 +38,12 @@ for(j in 1:length(names(file))) {
                          SitArea, AddedDate) %>% 
     mutate(year = getZ(file[[j]]), source = file_source)
   
-  temp <- temp %>%
-    mutate(mean_temp = raster::extract(file[[j]], temp, fun = mean)) %>%
-    mutate(max_temp = raster::extract(file[[j]], temp, fun = max)) %>%
-    mutate(min_temp = raster::extract(file[[j]], temp, fun = min))
+  ## make sure the layers align
+  extent(file[[j]]) <- extent(kbas)
+  
+  ev <- exact_extract(file[[j]], kbas, c("mean", "min", "max"))
+  
+  temp <- cbind(temp, ev)
   
   all_data <- rbind(all_data, temp)
   
