@@ -36,7 +36,9 @@ print("starting kbas")
 for(j in 1:length(names(file))) {
   temp <- kbas %>% dplyr::select(SitRecID, Country, ISO3, NatName, IntName, 
                          SitArea, AddedDate) %>% 
-    mutate(year = getZ(file[[j]]), source = file_source) %>%
+    mutate(year = getZ(file[[j]]), source = file_source)
+  
+  temp <- temp %>%
     mutate(mean_temp = raster::extract(file[[j]], temp, fun = mean)) %>%
     mutate(max_temp = raster::extract(file[[j]], temp, fun = max)) %>%
     mutate(min_temp = raster::extract(file[[j]], temp, fun = min))
