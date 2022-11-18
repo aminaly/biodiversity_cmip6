@@ -10,23 +10,25 @@ library(raster)
 library(lfe)
 library(lubridate)
 library(exactextractr)
+library(stars)
+library(geobgu)
 
 ## pick up args from commandline/sbatch
 args <- commandArgs(trailingOnly = TRUE)
 rep <- as.numeric(args[1])
 
 ## test run? If so, just perform this on KBAs in USA
-TEST = FALSE
+TEST <- TRUE
 
 #get list of allCMIP and select the one for this task
 cmip_files <- list.files("raw_data/CMIP6_for_Amina", pattern = "*.nc", full.names = T)
 i <- cmip_files[rep]
-file <- brick(i)
+file <- stack(i)
 file_source <- str_extract(filename(file), "[^/]*$")
 
 #### extract over all KBAs ----
 #load in KBA
-kbas <- st_read(dsn = paste0(getwd(), "/raw_data/KBA2020/KBAsGlobal_2020_September_02_POL.shp"), stringsAsFactors = F, crs = 4326) 
+kbas <- st_read(dsn = paste0(getwd(), "/raw_data/KBA2020/KBAsGlobal_2020_September_02_POL_valid.shp"), stringsAsFactors = F) 
 if(TEST) kbas <- kbas %>% filter(ISO3 == "USA") %>% slice_head(n = 25)
 if(sum(st_is_valid(kbas)) < nrow(kbas)) kbas <- st_make_valid(kbas)
 
@@ -36,14 +38,10 @@ print("starting kbas")
 for(j in 1:length(names(file))) {
   temp <- kbas %>% dplyr::select(SitRecID, Country, ISO3, NatName, IntName, 
                          SitArea, AddedDate) %>% 
-    mutate(year = getZ(file[[j]]), source = file_source)
-  
-  extracted_vals <-  exact_extract(file[[j]], kbas)
-  
-  temp$mean_temp <- lapply(extracted_vals, function(x){mean(as.numeric(x$value), na.rm = T)}) %>% unlist()  
-  temp$max_temp <- lapply(extracted_vals, function(x){max(as.numeric(x$value), na.rm = T)}) %>% unlist()
-  temp$min_temp <- lapply(extracted_vals, function(x){min(as.numeric(x$value), na.rm = T)}) %>% unlist()
-  all_data <- bind_rows(all_data, temp)
+    mutate(year = getZ(file[[j]]), source = file_source) %>%
+    mutate(mean_temp = raster::extract(file[[j]], temp, fun = mean)) %>%
+    mutate(max_temp = raster::extract(file[[j]], temp, fun = max)) %>%
+    mutate(min_temp = raster::extract(file[[j]], temp, fun = min))
   
 }
 print("finished")
@@ -78,18 +76,12 @@ if(TEST) kbas <- kbas %>% filter(ISO3 == "USA") %>% slice_head(n = 25)
 all_data <- c()
 print("starting fied kbas")
 for(j in 1:length(names(file))) {
-  
   temp <- kbas %>% dplyr::select(SitRecID, Country, ISO3, NatName, IntName, 
-                         SitArea, AddedDate) %>% 
-    mutate(year = getZ(file[[j]]), source = file_source)
-  
-  extracted_vals <-  exact_extract(file[[j]], kbas)
-  
-  temp$mean_temp <- lapply(extracted_vals, function(x){mean(as.numeric(x$value), na.rm = T)}) %>% unlist()  
-  temp$max_temp <- lapply(extracted_vals, function(x){max(as.numeric(x$value), na.rm = T)}) %>% unlist()
-  temp$min_temp <- lapply(extracted_vals, function(x){min(as.numeric(x$value), na.rm = T)}) %>% unlist()
-  
-  all_data <- bind_rows(all_data, temp)
+                                 SitArea, AddedDate) %>% 
+    mutate(year = getZ(file[[j]]), source = file_source) %>%
+    mutate(mean_temp = raster::extract(file[[j]], temp, fun = mean)) %>%
+    mutate(max_temp = raster::extract(file[[j]], temp, fun = max)) %>%
+    mutate(min_temp = raster::extract(file[[j]], temp, fun = min))
   
 }
 print("finished")
