@@ -10,8 +10,6 @@ library(raster)
 library(lfe)
 library(lubridate)
 library(exactextractr)
-library(stars)
-library(geobgu)
 
 ## pick up args from commandline/sbatch
 args <- commandArgs(trailingOnly = TRUE)
