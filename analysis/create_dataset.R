@@ -21,7 +21,7 @@ TEST <- TRUE
 #get list of allCMIP and select the one for this task
 cmip_files <- list.files("raw_data/CMIP6_for_Amina", pattern = "*.nc", full.names = T)
 i <- cmip_files[rep]
-file <- stack(i)
+file <- brick(i)
 file_source <- str_extract(filename(file), "[^/]*$")
 
 #### extract over all KBAs ----
@@ -80,10 +80,14 @@ print("starting fied kbas")
 for(j in 1:length(names(file))) {
   temp <- kbas %>% dplyr::select(SitRecID, Country, ISO3, NatName, IntName, 
                                  SitArea, AddedDate) %>% 
-    mutate(year = getZ(file[[j]]), source = file_source) %>%
+    mutate(year = getZ(file[[j]]), source = file_source)
+  
+  temp <- temp %>%
     mutate(mean_temp = raster::extract(file[[j]], temp, fun = mean)) %>%
     mutate(max_temp = raster::extract(file[[j]], temp, fun = max)) %>%
     mutate(min_temp = raster::extract(file[[j]], temp, fun = min))
+  
+  all_data <- rbind(all_data, temp)
   
 }
 print("finished")
