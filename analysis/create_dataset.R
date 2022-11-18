@@ -43,6 +43,8 @@ for(j in 1:length(names(file))) {
     mutate(max_temp = raster::extract(file[[j]], temp, fun = max)) %>%
     mutate(min_temp = raster::extract(file[[j]], temp, fun = min))
   
+  all_data <- rbind(all_data, temp)
+  
 }
 print("finished")
 #save this out to make my life easier
