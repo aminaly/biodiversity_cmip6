@@ -38,5 +38,3 @@ The following objects are masked from ‘package:base’:
 
     date, intersect, setdiff, union
 
-Error: [names<-] incorrect number of names
-Execution halted

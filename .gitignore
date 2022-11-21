@@ -1,5 +1,6 @@
 .DS_Store
 raw_data
+processed_data
 .RData
 .RDataTmp
 .RDataTmp1
