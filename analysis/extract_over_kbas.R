@@ -27,7 +27,7 @@ file_source <- str_extract(filename(file), "[^/]*$")
 #### extract over all KBAs ----
 #load in KBA
 kbas <- st_read(dsn = paste0(getwd(), "/raw_data/KBA2020/KBAsGlobal_2020_September_02_POL_valid.shp"), stringsAsFactors = F) 
-if(TEST) kbas <- kbas %>% filter(ISO3 == "USA") 
+if(TEST) kbas <- kbas %>% filter(ISO3 %in% c("BTN", "CHE")) 
 if(sum(st_is_valid(kbas)) < nrow(kbas)) kbas <- st_make_valid(kbas)
 
 extent(file) <- extent(kbas)
