@@ -17,4 +17,8 @@ ml gcc/9.1.0
 
 cd $OAK/group_members/aminaly/biodiversity_cmip6
 let buffer=$SLURM_ARRAY_TASK_ID
+<<<<<<< HEAD
 Rscript ./analysis/extract_over_kbas.R $buffer
+=======
+Rscript ./analysis/extract_over_pas.R $buffer
+>>>>>>> 8577a54b5b7dee812d34b291e237be257a52ee71
