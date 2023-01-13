@@ -14,7 +14,7 @@
 ml devel physics netcdf cdo/2.1.1
 
 set year=$SLURM_ARRAY_TASK_ID
-cd $OAK/group_members/www.ncei.noaa.gov/data/avhrr-land-normalized-difference-vegetation-index/access/%year%
+cd $OAK/group_members/www.ncei.noaa.gov/data/avhrr-land-normalized-difference-vegetation-index/access/$SLURM_ARRAY_TASK_ID
 
 cdo ensmean *.nc %year%_mean.nc
 cdo ensmax *.nc %year%_max.nc
