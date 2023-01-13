@@ -75,7 +75,7 @@ coln <- c("SitRecID", "Country", "ISO3", "NatName", "IntName", "SitArea", "IbaSt
           "DelGeom", "Shape_Leng", "Shape_Area", "original_area", "kba_notes", 
           "akba", "geometry")
 colnames(kbas) <- coln
-if(TEST) kbas <- kbas %>% filter(ISO3 == "USA") 
+if(TEST) kbas <- kbas %>% filter(ISO3 %in% c("BTN", "CHE")) 
 
 extent(file) <- extent(kbas)
 
