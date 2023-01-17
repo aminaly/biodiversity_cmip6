@@ -2,8 +2,8 @@
 #SBATCH --job-name=extractCMIP
 #SBATCH --nodes=2
 #SBATCH --array=1982-2000
-#SBATCH --error=/oak/stanford/groups/omramom/group_members/aminaly/www.ncei.noaa.gov/data/avhrr-land-normalized-difference-vegetation-index/access/cdo.err
-#SBATCH --output=/oak/stanford/groups/omramom/group_members/aminaly/www.ncei.noaa.gov/data/avhrr-land-normalized-difference-vegetation-index/access/cdo.out
+#SBATCH --error=/oak/stanford/groups/omramom/group_members/aminaly/biodiversity_cmip6/outfiles/cdo.err
+#SBATCH --output=/oak/stanford/groups/omramom/group_members/aminaly/biodiversity_cmip6/outfiles/cdo.out
 #SBATCH --time=5:00:00
 #SBATCH --ntasks-per-node=1
 #SBATCH --mem-per-cpu=120GB
