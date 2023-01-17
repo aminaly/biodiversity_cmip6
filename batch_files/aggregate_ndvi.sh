@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=extractCMIP
 #SBATCH --nodes=2
-#SBATCH --array=1982-1983
+#SBATCH --array=1982-2000
 #SBATCH --error=/oak/stanford/groups/omramom/group_members/aminaly/www.ncei.noaa.gov/data/avhrr-land-normalized-difference-vegetation-index/access/cdo.err
 #SBATCH --output=/oak/stanford/groups/omramom/group_members/aminaly/www.ncei.noaa.gov/data/avhrr-land-normalized-difference-vegetation-index/access/cdo.out
 #SBATCH --time=5:00:00
@@ -16,7 +16,7 @@ ml devel physics netcdf cdo/2.1.1
 set year=$SLURM_ARRAY_TASK_ID
 cd $OAK/group_members/www.ncei.noaa.gov/data/avhrr-land-normalized-difference-vegetation-index/access/$SLURM_ARRAY_TASK_ID
 
-cdo ensmean *.nc %year%_mean.nc
-cdo ensmax *.nc %year%_max.nc
-cdo ensmin *.nc %year%_min.nc
+cdo ensmean *.nc /oak/stanford/groups/omramom/group_members/aminaly/biodiversity_cmip6/processed_data/NDVI/%year%_mean.nc
+cdo ensmax *.nc /oak/stanford/groups/omramom/group_members/aminaly/biodiversity_cmip6/processed_data/NDVI/%year%_max.nc
+cdo ensmin *.nc /oak/stanford/groups/omramom/group_members/aminaly/biodiversity_cmip6/processed_data/NDVI/%year%_min.nc
 
