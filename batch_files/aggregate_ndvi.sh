@@ -13,13 +13,8 @@
 
 ml devel physics netcdf cdo/2.1.1
 
-<<<<<<< HEAD
-let year=$SLURM_ARRAY_TASK_ID
-cd $OAK/group_members/www.ncei.noaa.gov/data/avhrr-land-normalized-difference-vegetation-index/access/%year%
-=======
 set year=$SLURM_ARRAY_TASK_ID
 cd $OAK/group_members/www.ncei.noaa.gov/data/avhrr-land-normalized-difference-vegetation-index/access/$SLURM_ARRAY_TASK_ID
->>>>>>> 9060975f6f386f8089d625ac0618025bb399deb2
 
 cdo ensmean *.nc /oak/stanford/groups/omramom/group_members/aminaly/biodiversity_cmip6/processed_data/NDVI/%year%_mean.nc
 cdo ensmax *.nc /oak/stanford/groups/omramom/group_members/aminaly/biodiversity_cmip6/processed_data/NDVI/%year%_max.nc
