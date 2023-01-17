@@ -28,7 +28,10 @@ file_source <- str_extract(filename(file), "[^/]*$")
 
 #### extract over all PAs ----
 #load in PAs, subset if necessary, and clean up
-pas <- st_read(dsn = paste0(getwd(), "/raw_data/WDPA/WDPA_Nov2020_Public_shp/WDPA_poly_Nov2020_filtered.gdb"))
+ifelse(file.exists("processed_data/WDPA/clean_wdpa_terrestrial.shp"),  
+       pas <- st_read(dsn = "processed_data/WDPA/clean_wdpa_terrestrial.shp", stringsAsFactors = F, crs = 4326), 
+       pas <- clean_pas("raw_data/WDPA"))
+
 if(TEST) pas <- pas %>% filter(grepl("BRA", ISO3)) 
 pas <- clean_pas(pas)
 
@@ -37,10 +40,9 @@ extent(file) <- extent(pas)
 
 ## Run through CMIP6 temperature brick and extract over the buffers
 all_data <- c()
-print("starting kbas")
+print("starting cmip6 extract")
 for(j in 1:length(names(file))) {
-  temp <- pas %>% dplyr::select(WDPAID, Name, DESIG, DESIG_TYPE, STATUS_YR, 
-                         GOV_TYPE, ISO3) %>% 
+  temp <- pas %>% dplyr::select(WDPAID) %>% 
     mutate(year = getZ(file[[j]]), source = file_source) %>% st_drop_geometry()
   
   ## make sure the layers align
@@ -55,17 +57,8 @@ for(j in 1:length(names(file))) {
 }
 print("finished")
 
-
-## now we do this with NDVI
-
-
-## new we combine NDVI and temp
-
-## now we save out 
-
-
 #save this out to make my life easier
-file_name <- paste0("./processed_data/pa_cmip_ovl/", file_source, ".rds")
+file_name <- paste0("./processed_data/cmip6_pa_ovl/", file_source, ".rds")
 saveRDS(all_data, file_name)
 
 ## unload all KBAs and all_data to save memory 

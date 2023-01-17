@@ -45,9 +45,10 @@ b <- kba_temps %>% filter(year==2100 & ISO3 == COUNTRY) %>% dplyr::select(SitRec
 kt <- left_join(a, b, by = "SitRecID")
 country <- world %>% filter(ISO_A3 == COUNTRY)
 kt <- left_join(kt, kba_class, by = "SitRecID")
-kt <- kt %>% filter(terrestrial == 1 & marine == 0) %>% rename(cov = PA.Coverage) %>% mutate(dif = mean.y - mean.x)
+kt <- kt %>% filter(terrestrial == 1 & marine == 0) %>%
+    rename(cov = PA.Coverage) %>% mutate(dif = mean.y - mean.x)
 
-pdf(paste0("./visuals/view_", COUNTRY, td, ".pdf")) ## start pdf up here
+pdf(paste0("./visuals/view_", td, ".pdf")) ## start pdf up here
 
 ggplot(data = kt) +
   ggtitle(paste(name, "Expected Change in Temperature 2015-2100")) +
@@ -57,12 +58,27 @@ ggplot(data = kt) +
   labs(colour="2100 - 2015 Annual Mean Temperature", fill = "Temperature \n Difference °C") +
   theme_bw()
 
+tm_shape(country) + tm_fill("#addd8e") + tm_shape(kt) +
+  tm_polygons("dif", palette = "RdPu") +tm_facets(by = "COUNTRY.x") + 
+  tm_layout(legend.title.size = 3,
+            legend.text.size = 1.5,
+            legend.bg.color = "white",
+            legend.bg.alpha = 1)
+
 ### plot temperature trend
-kt_nogeo <- kt %>% mutate(group = cut(dif, 5)) %>% st_drop_geometry 
+a <- kba_temps %>% filter(year==2015 & ISO3 == COUNTRY) %>% dplyr::select(SitRecID, mean) %>% st_drop_geometry()
+b <- kba_temps %>% filter(year==2100 & ISO3 == COUNTRY) %>% dplyr::select(SitRecID, mean) %>% st_drop_geometry()
+kt_nogeo <- left_join(a, b, by = "SitRecID")
+kt_nogeo <- left_join(kt_nogeo, kba_class, by = "SitRecID")
+kt_nogeo <- kt_nogeo %>% filter(terrestrial == 1 & marine == 0) %>% 
+  rename(cov = PA.Coverage) %>% mutate(dif = mean.y - mean.x) %>% 
+  mutate(group = cut(dif, 4)) %>% st_drop_geometry 
 
 ggplot(data = kt_nogeo, aes(group)) +
   geom_bar(aes(fill = factor(cov, levels = c("complete", "partial", "none")))) +
   labs(xlab = "°C Change from 2015 to 2100", ylab = "Number of KBAs", fill = "KBA Coverage") +
+  scale_fill_manual(values = c("#4d9221", "#e6f5d0", "#c51b7d")) +
+  #facet_grid(~COUNTRY)
   theme_bw()
 
 
