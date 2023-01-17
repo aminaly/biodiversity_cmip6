@@ -1,0 +1,7 @@
+/var/spool/slurmd/job7119800/slurm_script: line 17: cd: /oak/stanford/groups/omramom/aminaly/biodiversity_cmip6/raw_data/NDVI/www.ncei.noaa.gov/data/land-normalized-difference-vegetation-index/access/1983: No such file or directory
+cdo    ensmean: Open failed on >*.nc<
+                No such file or directory
+cdo    ensmax: Open failed on >*.nc<
+               No such file or directory
+cdo    ensmin: Open failed on >*.nc<
+               No such file or directory
