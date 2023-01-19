@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=extractCMIP
 #SBATCH --nodes=1
-#SBATCH --array=1982-1983
+#SBATCH --array=1981-2022
 #SBATCH --error=/oak/stanford/groups/omramom/group_members/aminaly/biodiversity_cmip6/outfiles/cdo.err
 #SBATCH --output=/oak/stanford/groups/omramom/group_members/aminaly/biodiversity_cmip6/outfiles/cdo.out
 #SBATCH --time=5:00:00
