@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=aggregateNDVI
 #SBATCH --nodes=1
-#SBATCH --array=1981-2022
+#SBATCH --array=1988,1990,1996
 #SBATCH --error=/oak/stanford/groups/omramom/group_members/aminaly/biodiversity_cmip6/outfiles/cdo.err
 #SBATCH --output=/oak/stanford/groups/omramom/group_members/aminaly/biodiversity_cmip6/outfiles/cdo.out
 #SBATCH --time=5:00:00
