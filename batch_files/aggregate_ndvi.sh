@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=extractCMIP
+#SBATCH --job-name=aggregateNDVI
 #SBATCH --nodes=1
 #SBATCH --array=1981-2022
 #SBATCH --error=/oak/stanford/groups/omramom/group_members/aminaly/biodiversity_cmip6/outfiles/cdo.err

@@ -33,10 +33,9 @@ ifelse(file.exists("processed_data/WDPA/clean_wdpa_terrestrial.shp"),
        pas <- clean_pas("raw_data/WDPA"))
 
 if(TEST) pas <- pas %>% filter(grepl("BRA", ISO3)) 
-pas <- clean_pas(pas)
 
 ## make sure the extents match up (CMIP 6 is weird)
-extent(file) <- extent(pas)
+extent(file) <- extent(-180, 180, -79.21161, 81.36814)
 
 ## Run through CMIP6 temperature brick and extract over the buffers
 all_data <- c()
@@ -46,7 +45,7 @@ for(j in 1:length(names(file))) {
     mutate(year = getZ(file[[j]]), source = file_source) %>% st_drop_geometry()
   
   ## make sure the layers align
-  extent(file[[j]]) <- extent(pas)
+  extent(file[[j]]) <- extent(-180, 180, -79.21161, 81.36814)
   
   ev <- exact_extract(file[[j]], pas, c("mean", "min", "max"))
   
@@ -57,9 +56,11 @@ for(j in 1:length(names(file))) {
 }
 print("finished")
 
-#save this out to make my life easier
-file_name <- paste0("./processed_data/cmip6_pa_ovl/", file_source, ".csv")
-saveRDS(all_data, file_name)
+#rename columns for later
+all_data <- all_data %>% rename(mean_temp = mean, min_temp = min, max_temp = max)
 
-## unload all KBAs and all_data to save memory 
-rm(all_data)
+#save this out to make my life easier
+file_name <- paste0(getwd(), "/processed_data/cmip6_pa_ovl/", file_source, ".csv")
+write.csv(all_data, file_name)
+
+

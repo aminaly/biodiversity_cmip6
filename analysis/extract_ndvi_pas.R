@@ -18,10 +18,11 @@ library(exactextractr)
 TEST <- TRUE
 
 #load in PAs, subset if necessary, and clean up
-ifelse(file.exists("processed_data/WDPA/clean_wdpa_terrestrial.shp"),  
+ifelse(file.exists("/processed_data/WDPA/clean_wdpa_terrestrial.shp"),  
        pas <- st_read(dsn = "processed_data/WDPA/clean_wdpa_terrestrial.shp", stringsAsFactors = F, crs = 4326), 
-       pas <- clean_pas("raw_data/WDPA"))if(TEST) pas <- pas %>% filter(grepl("BRA", ISO3)) 
-pas <- clean_pas(pas)
+       pas <- clean_pas("raw_data/WDPA"))
+
+if(TEST) pas <- pas %>% filter(grepl("BRA", ISO3)) 
 
 all_data <- c()
 
@@ -29,24 +30,23 @@ all_data <- c()
 
 ## Run through CMIP6 temperature brick and extract over the buffers
 print("starting NDVI")
-for(y in 1982:2022) {
+for(y in 1981:1982) {
   
-  temp <- pas %>% dplyr::select(WDPAID, Name, DESIG, DESIG_TYPE, STATUS_YR, 
+  temp <- pas %>% dplyr::select(WDPAID, NAME, DESIG, DESIG_TYPE, STATUS_YR, 
                                 GOV_TYPE, ISO3) %>% 
-    mutate(year = y, mean_ndvi = "mean") %>% st_drop_geometry()
+    mutate(year = y) %>% st_drop_geometry()
 
   #extract and add avg mean
-  file_mean <- brick(paste0(getwd(), "processed_data/NDVI/", y, "_mean.nc"))
-  ev <- exact_extract(file, pas, "mean")
-  temp <- cbind(temp, ev)
+  file_mean <- brick(paste0(getwd(), "/processed_data/NDVI/", y, "_mean.nc"))
+  ev <- exact_extract(file_mean, pas, "mean")
+  temp <- cbind(temp, mean_ndvi = ev)
   
-  temp2 <- pas %>% dplyr::select(WDPAID) %>% 
-    mutate(max_ndvi = "max") %>% st_drop_geometry()
+  temp2 <- pas %>% dplyr::select(WDPAID) %>% st_drop_geometry()
   
   #extract and add avg max
   file_max <- brick(paste0("processed_data/NDVI/", y, "_max.nc"))
-  ev <- exact_extract(file, pas, "mean")
-  temp2 <- cbind(temp2, ev)
+  ev <- exact_extract(file_max, pas, "mean")
+  temp2 <- cbind(temp2, max_ndvi = ev)
   
   temp <- left_join(temp, temp2, by = "WDPAID")
   
@@ -58,7 +58,5 @@ print("finished ndvi")
 
 #save this out to make my life easier
 file_name <- paste0("./processed_data/NDVI/ndvi_pa_ovl.csv")
-saveRDS(all_data, file_name)
+write.csv(all_data, file_name)
 
-## unload all KBAs and all_data to save memory 
-rm(all_data)
