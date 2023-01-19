@@ -18,7 +18,7 @@ library(exactextractr)
 TEST <- TRUE
 
 #load in PAs, subset if necessary, and clean up
-ifelse(file.exists("/processed_data/WDPA/clean_wdpa_terrestrial.shp"),  
+ifelse(file.exists("processed_data/WDPA/clean_wdpa_terrestrial.shp"),  
        pas <- st_read(dsn = "processed_data/WDPA/clean_wdpa_terrestrial.shp", stringsAsFactors = F, crs = 4326), 
        pas <- clean_pas("raw_data/WDPA"))
 
