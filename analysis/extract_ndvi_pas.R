@@ -36,7 +36,7 @@ for(y in 1982:2022) {
     mutate(year = y, mean_ndvi = "mean") %>% st_drop_geometry()
 
   #extract and add avg mean
-  file_mean <- brick(paste0("processed_data/NDVI/", y, "_mean.nc"))
+  file_mean <- brick(paste0(getwd(), "processed_data/NDVI/", y, "_mean.nc"))
   ev <- exact_extract(file, pas, "mean")
   temp <- cbind(temp, ev)
   
@@ -44,7 +44,7 @@ for(y in 1982:2022) {
     mutate(max_ndvi = "max") %>% st_drop_geometry()
   
   #extract and add avg max
-  file_mean <- brick(paste0("processed_data/NDVI/", y, "_max.nc"))
+  file_max <- brick(paste0("processed_data/NDVI/", y, "_max.nc"))
   ev <- exact_extract(file, pas, "mean")
   temp2 <- cbind(temp2, ev)
   
@@ -56,9 +56,8 @@ for(y in 1982:2022) {
 
 print("finished ndvi")
 
-
 #save this out to make my life easier
-file_name <- paste0("./processed_data/NDVI/", file_source, ".rds")
+file_name <- paste0("./processed_data/NDVI/ndvi_pa_ovl.csv")
 saveRDS(all_data, file_name)
 
 ## unload all KBAs and all_data to save memory 

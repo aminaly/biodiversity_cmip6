@@ -58,7 +58,7 @@ for(j in 1:length(names(file))) {
 print("finished")
 
 #save this out to make my life easier
-file_name <- paste0("./processed_data/cmip6_pa_ovl/", file_source, ".rds")
+file_name <- paste0("./processed_data/cmip6_pa_ovl/", file_source, ".csv")
 saveRDS(all_data, file_name)
 
 ## unload all KBAs and all_data to save memory 
