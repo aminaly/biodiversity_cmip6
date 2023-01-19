@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=extractCMIP
+#SBATCH --job-name=exCMIP
 #SBATCH --nodes=1
 #SBATCH --array=1-50%4
 #SBATCH --error=/oak/stanford/groups/omramom/group_members/aminaly/biodiversity_cmip6/outfiles/extractCMIP.err
