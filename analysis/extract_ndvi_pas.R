@@ -30,7 +30,7 @@ all_data <- c()
 
 ## Run through CMIP6 temperature brick and extract over the buffers
 print("starting NDVI")
-for(y in 1981:1982) {
+for(y in 1981:2022) {
   
   temp <- pas %>% dplyr::select(WDPAID, NAME, DESIG, DESIG_TYPE, STATUS_YR, 
                                 GOV_TYPE, ISO3) %>% 
