@@ -15,7 +15,7 @@ library(exactextractr)
 
 
 ## test run? If so, just perform this on KBAs in Brazil (or whatever)
-TEST <- TRUE
+TEST <- FALSE
 
 #load in PAs, subset if necessary, and clean up
 ifelse(file.exists("processed_data/wdpa/clean_wdpa_terrestrial.shp"),  
