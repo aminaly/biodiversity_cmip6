@@ -18,8 +18,8 @@ library(exactextractr)
 TEST <- TRUE
 
 #load in PAs, subset if necessary, and clean up
-ifelse(file.exists("processed_data/WDPA/clean_wdpa_terrestrial.shp"),  
-       pas <- st_read(dsn = "processed_data/WDPA/clean_wdpa_terrestrial.shp", stringsAsFactors = F, crs = 4326), 
+ifelse(file.exists("processed_data/wdpa/clean_wdpa_terrestrial.shp"),  
+       pas <- st_read(dsn = "processed_data/wdpa/clean_wdpa_terrestrial.shp", stringsAsFactors = F, crs = 4326), 
        pas <- clean_pas("raw_data/WDPA"))
 
 if(TEST) pas <- pas %>% filter(grepl("BRA", ISO3)) 
@@ -37,14 +37,14 @@ for(y in 1981:2022) {
     mutate(year = y) %>% st_drop_geometry()
 
   #extract and add avg mean
-  file_mean <- brick(paste0(getwd(), "/processed_data/NDVI/", y, "_mean.nc"))
+  file_mean <- brick(paste0(getwd(), "/processed_data/ndvi/", y, "_mean.nc"))
   ev <- exact_extract(file_mean, pas, "mean")
   temp <- cbind(temp, mean_ndvi = ev)
   
   temp2 <- pas %>% dplyr::select(WDPAID) %>% st_drop_geometry()
   
   #extract and add avg max
-  file_max <- brick(paste0("processed_data/NDVI/", y, "_max.nc"))
+  file_max <- brick(paste0("processed_data/ndvi/", y, "_max.nc"))
   ev <- exact_extract(file_max, pas, "mean")
   temp2 <- cbind(temp2, max_ndvi = ev)
   
@@ -57,6 +57,6 @@ for(y in 1981:2022) {
 print("finished ndvi")
 
 #save this out to make my life easier
-file_name <- paste0("./processed_data/NDVI/ndvi_pa_ovl.csv")
+file_name <- paste0("./processed_data/ndvi/ndvi_pa_ovl.csv")
 write.csv(all_data, file_name)
 

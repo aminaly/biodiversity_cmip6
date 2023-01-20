@@ -28,8 +28,8 @@ file_source <- str_extract(filename(file), "[^/]*$")
 
 #### extract over all PAs ----
 #load in PAs, subset if necessary, and clean up
-ifelse(file.exists("processed_data/WDPA/clean_wdpa_terrestrial.shp"),  
-       pas <- st_read(dsn = "processed_data/WDPA/clean_wdpa_terrestrial.shp", stringsAsFactors = F, crs = 4326), 
+ifelse(file.exists("processed_data/wdpa/clean_wdpa_terrestrial.shp"),  
+       pas <- st_read(dsn = "processed_data/wdpa/clean_wdpa_terrestrial.shp", stringsAsFactors = F, crs = 4326), 
        pas <- clean_pas("raw_data/WDPA"))
 
 if(TEST) pas <- pas %>% filter(grepl("BRA", ISO3)) 
