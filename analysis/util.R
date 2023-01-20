@@ -61,16 +61,7 @@ get_input_hist <- function(model, processed_data_loc = NA) {
   ##otherwise, lets make the dataset, save it, and return it
   #pickup wd for reset later
   oldwd <- getwd()
-  
-  #navigate to data folder
-  if(is.na(processed_data_directory)) {
-    ifelse(dir.exists("~/Box Sync/biodiversity_cmip6/processed_data"),
-         setwd("~/Box Sync/biodiversity_cmip6/processed_data"),
-         setwd("/oak/stanford/groups/omramom/group_members/aminaly/biodiversity_cmip6/processed_data")) 
-  } else {
-    setwd(processed_data_directory)
-  }
-  
+
   #read in data needed, combine, and filter
   cmip6 <- read.csv(paste0(processed_data_loc, "cmip6_pa_ovl/", model, ".csv"))
   ndvi <- read_csv(paste0(processed_data_loc, "ndvi/ndvi_pa_ovl.csv"))
