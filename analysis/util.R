@@ -72,8 +72,8 @@ get_input_hist <- function(model, processed_data_loc = NA) {
   }
   
   #read in data needed, combine, and filter
-  cmip6 <- read.csv(paste0("cmip6_pa_ovl/", model, ".csv"))
-  ndvi <- read_csv("ndvi/ndvi_pa_ovl.csv", row.names = F)
+  cmip6 <- read.csv(paste0(processed_data_loc, "cmip6_pa_ovl/", model, ".csv"))
+  ndvi <- read_csv(paste0(processed_data_loc, "ndvi/ndvi_pa_ovl.csv"))
   
   #combine
   data <- left_join(ndvi[,-1], cmip6[,-1], by = c("WDPAID", "year"))
