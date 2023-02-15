@@ -2,6 +2,7 @@
 
 ## load in dependencies
 library(caret)
+set.seed(100)
 
 ## set working directory
 ifelse(dir.exists("~/Box Sync/biodiversity_cmip6"),
@@ -19,11 +20,17 @@ ML_MODEL = "earth"
 ##get the data
 data <- get_input_hist(CMIP6_MODEL_NAME)
 
+## interpolate for any NA values?
+## for now just getting rid of them while we're testing
+data <- data %>% filter(!is.na(max_ndvi))
+
 ## index for training and test data
-data$split <- createDataPartition(data$WDPAID, p = .75, list = FALSE)
+split <- createDataPartition(data$WDPAID, p = .75, list = FALSE)
 
 ## get model
-model_mars = train(max_ndvi ~ , data=trainData, method=ML_MODEL)
+mod <- train(max_ndvi ~ DESIG_TYPE + STATUS_YR + GOV_TYPE + mean_temp + year , 
+                   data=data[split,], method=ML_MODEL)
+fitted <- predict(mod)
 
 
 
