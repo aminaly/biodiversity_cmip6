@@ -16,7 +16,7 @@ args <- commandArgs(trailingOnly = TRUE)
 rep <- as.numeric(args[1])
 
 ## test run? If so, just perform this on KBAs in USA
-TEST <- TRUE
+TEST <- FALSE
 
 #get list of allCMIP and select the one for this task
 cmip_files <- list.files("raw_data/CMIP6_for_Amina", pattern = "*.nc", full.names = T)
