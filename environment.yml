@@ -1,0 +1,15 @@
+channels:
+ - conda-forge
+ - defaults
+dependencies:
+ - python
+ - nodejs
+ - pandas
+ - dask
+ - jupyter
+ - jupyterlab
+ - jupyter-server-proxy
+ - matplotlib
+ - cartopy
+ - netCDF4
+ - xarray

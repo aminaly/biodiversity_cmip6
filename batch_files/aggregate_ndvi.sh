@@ -16,6 +16,6 @@ ml devel physics netcdf cdo/2.1.1
 set year=$SLURM_ARRAY_TASK_ID
 cd $OAK/group_members/aminaly/biodiversity_cmip6/raw_data/NDVI/www.ncei.noaa.gov/data/land-normalized-difference-vegetation-index/access/$SLURM_ARRAY_TASK_ID
 
-cdo ensmean *.nc ../../../../../../../processed_data/NDVI/${SLURM_ARRAY_TASK_ID}_mean.nc
-cdo ensmax *.nc ../../../../../../../processed_data/NDVI/${SLURM_ARRAY_TASK_ID}_max.nc
+cdo ensmean *.nc ../../../../../../../processed_data/ndvi/${SLURM_ARRAY_TASK_ID}_mean.nc
+cdo ensmax *.nc ../../../../../../../processed_data/ndvi/${SLURM_ARRAY_TASK_ID}_max.nc
 

@@ -1,5 +1,5 @@
 
-### Auxillary Code to Get Rid of KBA overlaps. Sourced in Intersection_GMBA
+### Auxillary Code to Get Rid of KBA overlaps. Sourced in extract_over_kbas
 
 #### Part 1.1 load packages ----
 # if you do not have any of the packages, please install them before running this code
@@ -14,14 +14,13 @@ sf::sf_use_s2(FALSE) ## to deal with some issues not fixable with st_make_valid
 #### Part 1.2 Working Directory & Files ----
 
 ## set the working directory
-ifelse(dir.exists("~/Box Sync/mountain_biodiversity"),
-       setwd("~/Box Sync/mountain_biodiversity"),
-       setwd("/oak/stanford/groups/omramom/group_members/aminaly/mountain_biodiversity"))
-folder <- getwd()
-finfile <- paste0(folder, "/data/KBA/KBA2020/KBAsGlobal_2020_September_02_POL_noOverlaps.shp") #folder where the files per country will be saved
+ifelse(dir.exists("~/Box Sync/biodiversity_cmip6"),
+       setwd("~/Box Sync/biodiversity_cmip6"),
+       setwd("/oak/stanford/groups/omramom/group_members/aminaly/biodiversity_cmip6"))
+finfile <- paste0(getwd(), "/raw_data/KBA2022/KBAsGlobal_2022_September_02_POL_noOverlaps.shp") #folder where the files per country will be saved
 
 #read in KBAs
-kbas <- st_read(dsn = paste0(folder, "/data/KBA/KBA2020/KBAsGlobal_2020_September_02_POL.shp"), stringsAsFactors = F, crs = 4326) 
+kbas <- st_read(dsn = paste0(getwd(), "/raw_data/KBA2022/KBAsGlobal_2022_September_02_POL.shp"), stringsAsFactors = F, crs = 4326) 
 if(sum(st_is_valid(kbas)) < nrow(kbas)) kbas <- st_make_valid(kbas)
 
 ## get all KBA areas
@@ -29,8 +28,9 @@ kbas$akba <- as.numeric(suppressWarnings(tryCatch({st_area(kbas$geometry, byid =
 kbas$kba_notes <- ""
 new_kbas <- c()
 
-intersecs_all <- readRDS("./data/intersecs_all.rds")
+intersecs_all <- st_intersects(kbas)
 
+## run through intersections
 for(k in 1:nrow(intersecs_all)) {
   
   print("KBA K # is")

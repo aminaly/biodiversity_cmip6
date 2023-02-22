@@ -45,3 +45,53 @@ clean_pas <- function(location) {
   return(pas)
   
 }
+
+## creates an input file to be used in the ML model on python (or here idk yet) 
+## note model name should have .nc but not .csv
+get_input_hist <- function(model, processed_data_loc = NA) {
+  
+  final_loc <- paste0(getwd(), "/processed_data/input_data/", model, ".csv")
+  if(is.na(processed_data_loc)) processed_data_loc <- paste0(getwd(), "/processed_data/") 
+  
+  ## check to see if this has been done before. If so, pick it up
+  if(file.exists(final_loc)) {
+    return(read.csv(final_loc))
+  }
+  
+  ##otherwise, lets make the dataset, save it, and return it
+  #pickup wd for reset later
+  oldwd <- getwd()
+
+  #read in data needed, combine, and filter
+  cmip6 <- read.csv(paste0(processed_data_loc, "cmip6_pa_ovl/", model, ".csv"))
+  ndvi <- read_csv(paste0(processed_data_loc, "ndvi/ndvi_pa_ovl.csv"))
+  
+  #combine
+  data <- left_join(ndvi[,-1], cmip6[,-1], by = c("WDPAID", "year"))
+  
+  #remove any years where there is a mismatch
+  data <- data %>% filter(!is.na(source))
+  write.csv(data, final_loc, row.names =  F)
+  
+  #reset wd
+  setwd(oldwd)
+  
+  return(data)
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

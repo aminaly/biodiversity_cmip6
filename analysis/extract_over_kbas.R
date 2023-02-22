@@ -1,3 +1,13 @@
+## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## Extract annual CMIP6 data over KBAs 
+## Amina Ly, Jan 2023
+## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Script return annual mean temperature of PAs based on gridded CMIP6
+
+## NOTE if you are running this with a new KBA file, ensure file paths here AND 
+## those in analysis/kba_cleaning.R are correct!!! 
+## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ifelse(dir.exists("~/Box Sync/biodiversity_cmip6"),
        setwd("~/Box Sync/biodiversity_cmip6"),
        setwd("/oak/stanford/groups/omramom/group_members/aminaly/biodiversity_cmip6"))
@@ -11,12 +21,12 @@ library(lfe)
 library(lubridate)
 library(exactextractr)
 
-## pick up args from commandline/sbatch
+## pick up args from command line/sbatch
 args <- commandArgs(trailingOnly = TRUE)
 rep <- as.numeric(args[1])
 
 ## test run? If so, just perform this on KBAs in USA
-TEST <- TRUE
+TEST <- FALSE
 
 #get list of allCMIP and select the one for this task
 cmip_files <- list.files("raw_data/CMIP6_for_Amina", pattern = "*.nc", full.names = T)
@@ -24,48 +34,13 @@ i <- cmip_files[rep]
 file <- brick(i)
 file_source <- str_extract(filename(file), "[^/]*$")
 
-#### extract over all KBAs ----
-#load in KBA
-kbas <- st_read(dsn = paste0(getwd(), "/raw_data/KBA2020/KBAsGlobal_2020_September_02_POL_valid.shp"), stringsAsFactors = F) 
-if(TEST) kbas <- kbas %>% filter(ISO3 %in% c("BTN", "CHE")) 
-if(sum(st_is_valid(kbas)) < nrow(kbas)) kbas <- st_make_valid(kbas)
-
-extent(file) <- extent(kbas)
-## Run through temperature brick and extract over the buffers
-all_data <- c()
-print("starting kbas")
-for(j in 1:length(names(file))) {
-  temp <- kbas %>% dplyr::select(SitRecID, Country, ISO3, NatName, IntName, 
-                         SitArea, AddedDate) %>% 
-    mutate(year = getZ(file[[j]]), source = file_source)
-  
-  ## make sure the layers align
-  extent(file[[j]]) <- extent(kbas)
-  
-  ev <- exact_extract(file[[j]], kbas, c("mean", "min", "max"))
-  
-  temp <- cbind(temp, ev)
-  
-  all_data <- rbind(all_data, temp)
-  
-}
-print("finished")
-#save this out to make my life easier
-file_name <- paste0("./processed_data/originalkba_cmip_ovl/", file_source, ".rds")
-saveRDS(all_data, file_name)
-
-## unload all KBAs and all_data to save memory 
-rm(kbas,all_data)
-
-#### extract over mountainous KBAs (source file to create it pulled from SDG Calculator https://github.com/GMBA-biodiversity/SDG15.4.1_Calculator) ----
-
 #### load in cleaned KBA, and if not source file to make it ----
-kba_loc <- paste0(getwd(),"/raw_data/KBA2020/KBAsGlobal_2020_September_02_POL_noOverlaps.shp")
+kba_loc <- paste0(getwd(),"/raw_data/KBA2022/KBAsGlobal_2022_September_02_POL_noOverlaps.shp")
 
 if(file.exists(kba_loc)) {
   kbas <- st_read(dsn = kba_loc, stringsAsFactors = F, crs = 4326) 
 } else {
-  source(paste0(folder, "/analysis/kba_cleaning.R"))
+  source(paste0(getwd(), "/analysis/kba_cleaning.R"))
   kbas <- st_read(dsn = kba_loc, stringsAsFactors = F, crs = 4326) 
 }
 
@@ -81,10 +56,9 @@ extent(file) <- extent(kbas)
 
 #### now extract over these cleaned up KBAs and save ----
 all_data <- c()
-print("starting fied kbas")
+print("starting clean kbas")
 for(j in 1:length(names(file))) {
-  temp <- kbas %>% dplyr::select(SitRecID, Country, ISO3, NatName, IntName, 
-                                 SitArea, AddedDate) %>% 
+  temp <- kbas %>% dplyr::select(SitRecID) %>% 
     mutate(year = getZ(file[[j]]), source = file_source)
   
   ## make sure the layers align
@@ -100,6 +74,54 @@ for(j in 1:length(names(file))) {
 print("finished")
 
 #save this out to make my life easier
-file_name <- paste0("./processed_data/cleankba_cmip_ovl/",file_source, ".rds")
+file_name <- paste0("./processed_data/cleankba_cmip_ovl/",file_source, ".csv")
 saveRDS(all_data, file_name)
 
+
+# CODE FOR EXTRACTING ORIGINAL KBAs w/o cleaning
+
+# #### extract over all KBAs ----
+# #load in KBAs
+# kba_loc <- paste0(getwd(), "/raw_data/KBA2022/KBAsGlobal_2022_September_02_POL_valid.shp") 
+# 
+# # if we haven't made these valid yet, do that and save it 
+# if(file.exists(kba_loc)) {
+#   kbas <- st_read(dsn = kba_loc, stringsAsFactors = F, crs = 4326) 
+# } else {
+#   kbas <- st_read(dsn = paste0(getwd(), "/raw_data/KBA2022/KBAsGlobal_2022_September_02_POL.shp") , stringsAsFactors = F, crs = 4326) 
+#   if(sum(st_is_valid(kbas)) < nrow(kbas)) kbas <- st_make_valid(kbas)
+#   st_write(kbas, dsn = kba_loc)
+# }
+# 
+# if(TEST) kbas <- kbas %>% filter(ISO3 %in% c("BTN", "CHE")) 
+# 
+# extent(file) <- extent(kbas)
+# ## Run through temperature brick and extract over the buffers
+# all_data <- c()
+# print("starting kbas")
+# for(j in 1:length(names(file))) {
+#   temp <- kbas %>% dplyr::select(SitRecID, Country, ISO3, NatName, IntName, 
+#                                  SitArea, AddedDate) %>% 
+#     mutate(year = getZ(file[[j]]), source = file_source)
+#   
+#   ## make sure the layers align
+#   extent(file[[j]]) <- extent(kbas)
+#   
+#   ev <- exact_extract(file[[j]], kbas, c("mean", "min", "max"))
+#   
+#   temp <- cbind(temp, ev)
+#   
+#   all_data <- rbind(all_data, temp)
+#   
+# }
+# print("finished")
+# #save this out to make my life easier
+# file_name <- paste0("./processed_data/originalkba_cmip_ovl/", file_source, ".rds")
+# saveRDS(all_data, file_name)
+# 
+# ## unload all KBAs and all_data to save memory 
+# rm(kbas,all_data)
+# 
+# #### extract over mountainous KBAs (source file to create it pulled from SDG Calculator https://github.com/GMBA-biodiversity/SDG15.4.1_Calculator) ----
+# 
+# 

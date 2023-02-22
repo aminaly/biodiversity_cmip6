@@ -1,3 +1,10 @@
+## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## Extract annual CMIP6  data from WDPA PAs
+## Amina Ly, Jan 2023
+## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Script return annual mean temperature of PAs based on gridded CMIP6
+## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ifelse(dir.exists("~/Box Sync/biodiversity_cmip6"),
        setwd("~/Box Sync/biodiversity_cmip6"),
        setwd("/oak/stanford/groups/omramom/group_members/aminaly/biodiversity_cmip6"))
@@ -18,7 +25,7 @@ args <- commandArgs(trailingOnly = TRUE)
 rep <- as.numeric(args[1])
 
 ## test run? If so, just perform this on KBAs in USA
-TEST <- TRUE
+TEST <- FALSE
 
 #get list of allCMIP and select the one for this task
 cmip_files <- list.files("raw_data/CMIP6_for_Amina", pattern = "*.nc", full.names = T)
@@ -28,8 +35,8 @@ file_source <- str_extract(filename(file), "[^/]*$")
 
 #### extract over all PAs ----
 #load in PAs, subset if necessary, and clean up
-ifelse(file.exists("processed_data/WDPA/clean_wdpa_terrestrial.shp"),  
-       pas <- st_read(dsn = "processed_data/WDPA/clean_wdpa_terrestrial.shp", stringsAsFactors = F, crs = 4326), 
+ifelse(file.exists("processed_data/wdpa/clean_wdpa_terrestrial.shp"),  
+       pas <- st_read(dsn = "processed_data/wdpa/clean_wdpa_terrestrial.shp", stringsAsFactors = F, crs = 4326), 
        pas <- clean_pas("raw_data/WDPA"))
 
 if(TEST) pas <- pas %>% filter(grepl("BRA", ISO3)) 
