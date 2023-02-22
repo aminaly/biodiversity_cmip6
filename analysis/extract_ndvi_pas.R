@@ -1,3 +1,10 @@
+## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## Extract annual NDVI data over WDPA PAs
+## Amina Ly, Jan 2023
+## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Script return annual mean temperature of PAs based on gridded CMIP6
+## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ifelse(dir.exists("~/Box Sync/biodiversity_cmip6"),
        setwd("~/Box Sync/biodiversity_cmip6"),
        setwd("/oak/stanford/groups/omramom/group_members/aminaly/biodiversity_cmip6"))
