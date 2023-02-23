@@ -62,7 +62,7 @@ isos <- read.csv("./raw_data/iso_country_codes.csv")   ## file with ISO codes; s
 pas <- st_read(dsn = "./processed_data/wdpa/clean_wdpa_terrestrial.shp")
 
 ## Pull in cleaned KBA
-if(!file.exists("./raw_data/KBA2022/KBAsGlobal_2022_September_02_POL_noOverlaps.shp")) source("~/Box Sync/biodiversity_cmip6/analysis/kba_cleaning.R")
+if(!file.exists("./raw_data/KBA2022/KBAsGlobal_2022_September_02_POL_noOverlaps.shp")) source("./analysis/kba_cleaning.R")
 kbas <- st_read(dsn = "./raw_data/KBA2022/KBAsGlobal_2022_September_02_POL_noOverlaps.shp", stringsAsFactors = F, crs = 4326) 
 ## fix column names 
 coln <- c("SitRecID", "Country", "ISO3", "NatName", "IntName", "SitArea", "IbaStatus",
