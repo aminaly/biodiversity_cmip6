@@ -54,7 +54,7 @@ folder <- getwd()
 finfolder <- paste0(folder, "/processed_data/pa_kba_ovl") #folder where final file will be saved
 
 # You will need 2 additional files: KBA classes and iso country codes
-kba_class <- read.csv("./raw_data/kba_class_2022.csv", sep = "")   ## file with types of kbas 
+#kba_class <- read.csv("./raw_data/kba_class_2022.csv", sep = "")   ## file with types of kbas 
 isos <- read.csv("./raw_data/iso_country_codes.csv")   ## file with ISO codes; should be stored in the wkfolder specified above; no changes in 2 019, so 2018 file used
 
 #### 1.3 Read in shapefiles ----
@@ -149,8 +149,8 @@ kbas_without_names <- kbas[kbas$Country == " ",] #checks if any kbas are missing
 
 #TODO check up on this after follow up from Tom
 #filter KBAs to only include mountainous and terrestrial ones
-land_kbas <- kba_class %>% select(SitRecID, mountain, terrestrial, marine, freshwater = Freshwater)
-kbas <- left_join(kbas, land_kbas, by = "SitRecID")
+#land_kbas <- kba_class %>% select(SitRecID, mountain, terrestrial, marine, freshwater = Freshwater)
+#kbas <- left_join(kbas, land_kbas, by = "SitRecID")
 
 #### 2.5 - Transboundary PAs ----
 
@@ -238,7 +238,6 @@ for (x in 1:length(listloop)){
     print("no PAs")
     areasov <- data.frame(SitRecID = kba.c$SitRecID, kba = kba.c$akba, ovl = 0, year = 0, random = F, nPAs = 0, percPA = 0, 
                           Country = Country,
-                          mountain = kba.c$mountain, terrestrial = kba.c$terrestrial, marine = kba.c$marine, freshwater = kba.c$marine,
                           original_area = kba.c$original_area,
                           kba_note = kba.c$kba_notes,
                           error_note = "no PAs in this range")
@@ -252,8 +251,6 @@ for (x in 1:length(listloop)){
     if (length(ovkba) == 0){ 
       areasov <- data.frame(SitRecID = NA, kba = NA, ovl = NA, year = NA, random = F, nPAs = NA, percPA = NA, 
                             Country = Country,
-                            mountain = kba.c$mountain, terrestrial = kba.c$terrestrial, 
-                            marine = kba.c$marine, freshwater = kba.c$marine,
                             original_area = kba.c$original_area,
                             kba_note = kba.c$kba_notes,
                             error_note = "error in overlap btwn PA and range")
@@ -263,8 +260,6 @@ for (x in 1:length(listloop)){
       
       areasov <- data.frame(SitRecID = kba.c$SitRecID, kba = kba.c$akba, ovl = 0, year = 0, random = F, nPAs = 0, percPA = 0,  
                             Country = Country,
-                            mountain = kba.c$mountain, terrestrial = kba.c$terrestrial, 
-                            marine = kba.c$marine, freshwater = kba.c$marine,
                             original_area = kba.c$original_area, 
                             kba_note = kba.c$kba_notes,
                             error_note = "no overlaps btwn PAs and kbas in this range")
@@ -328,8 +323,6 @@ for (x in 1:length(listloop)){
             random1 <- sum(random0$random) > 0
             areasov1 <- data.frame(SitRecID=kbaz$SitRecID, kba=akba, ovl=ovlz, year=year1, random = random1, nPAs=nrow(ovf1), 
                                    Country = Country,
-                                   mountain = kbaz$mountain, terrestrial = kbaz$terrestrial,
-                                   marine = kbaz$marine, freshwater = kbaz$freshwater, 
                                    original_area = kbaz$original_area,
                                    kba_note = kbaz$kba_notes,
                                    error_note = "") #creates row in output table with this site overlap area and associated information within it #sets numbers to numeric not units (removes m^2)
@@ -374,8 +367,6 @@ for (x in 1:length(listloop)){
                   
                   areasov1 <- rbind(areasov1, data.frame(SitRecID=kbaz$SitRecID, kba=akba, ovl=ovlz, year=year2, random = random3, nPAs=nrow(ovf2), 
                                                          Country = Country,
-                                                         mountain = kbaz$mountain, terrestrial = kbaz$terrestrial, 
-                                                         marine = kbaz$marine, freshwater = kbaz$freshwater, 
                                                          original_area = kbaz$original_area,
                                                          kba_note = kbaz$kba_notes,
                                                          error_note = ""))
@@ -387,9 +378,6 @@ for (x in 1:length(listloop)){
           if (is.null(ovf) | !"sf" %in% class(ovf)){
             areasov1 <- data.frame(SitRecID=kbaz$SitRecID, kba=akba, ovl=NA, year=0, random=F, nPAs=0,
                                    Country = Country,
-                                   mountain = kbaz$mountain, 
-                                   terrestrial = kbaz$terrestrial, marine = kbaz$marine, 
-                                   freshwater = kbaz$freshwater, 
                                    original_area = kbaz$original_area,
                                    kba_note = kbaz$kba_notes,
                                    error_note = "error in spatial overlap")
@@ -399,9 +387,6 @@ for (x in 1:length(listloop)){
         if (length(which(ovkba[ ,z] == T)) == 0){
           areasov1 <- data.frame(SitRecID=kbaz$SitRecID, kba=akba, ovl=0, year=0, random=F, nPAs=0,
                                  Country = Country,
-                                 mountain = kbaz$mountain, 
-                                 terrestrial = kbaz$terrestrial, marine = kbaz$marine, 
-                                 freshwater = kbaz$freshwater, 
                                  original_area = kbaz$original_area,
                                  kba_note = kbaz$kba_notes,
                                  error_note = "no pas overlapping this kba") ## if there are NO (zero/none) pas overlapping the kba
