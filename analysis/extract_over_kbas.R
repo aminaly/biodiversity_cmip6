@@ -45,11 +45,12 @@ if(file.exists(kba_loc)) {
 }
 
 ## clean up column names, select terrestrial, and shorten if testing
-coln <- c("SitRecID", "Country", "ISO3", "NatName", "IntName", "SitArea", "IbaStatus",
-          "KBAStatus", "AzeStatus", "AddedDate", "ChangeDate", "Source", "DelTxt",
-          "DelGeom", "Shape_Leng", "Shape_Area", "original_area", "kba_notes", 
-          "akba", "class", "geometry")
-colnames(kbas) <- coln
+coln <- c("SitRecID", "Region", "Country", "ISO3", "NatName", "IntName", "FinCode", 
+          "SitLat", "SitLong", "GISArea", "IbaStatus", "KBAStatus", 
+          "AzeStatus", "AddedDate", "ChangeDate", "Source", "DelTxt",
+          "DelGeom", "KBA_Quality", "Shape_Long", "Shape_Area", "LegacyKBA", "Criteria",
+          "original_area", "kba_notes", "akba", "class", "geometry")
+names(kbas) <- coln
 if(TEST) kbas <- kbas %>% filter(ISO3 %in% c("BTN", "CHE")) 
 
 kbas <- kbas %>% filter(class == "Terrestrial")

@@ -72,11 +72,12 @@ if(file.exists(kba_loc)) {
   kbas <- st_read(dsn = kba_loc, stringsAsFactors = F, crs = 4326) 
 }
 ## fix column names 
-coln <- c("SitRecID", "Country", "ISO3", "NatName", "IntName", "SitArea", "IbaStatus",
-          "KBAStatus", "AzeStatus", "AddedDate", "ChangeDate", "Source", "DelTxt",
-          "DelGeom", "Shape_Leng", "Shape_Area", "original_area", "kba_notes", 
-          "akba", "class", "geometry")
-colnames(kbas) <- coln
+coln <- c("SitRecID", "Region", "Country", "ISO3", "NatName", "IntName", "FinCode", 
+          "SitLat", "SitLong", "GISArea", "IbaStatus", "KBAStatus", 
+          "AzeStatus", "AddedDate", "ChangeDate", "Source", "DelTxt",
+          "DelGeom", "KBA_Quality", "Shape_Long", "Shape_Area", "LegacyKBA", "Criteria",
+          "original_area", "kba_notes", "akba", "class", "geometry")
+names(kbas) <- coln
  
 if("Shape" %in% names(pas)) pas <- pas %>% rename(geometry = Shape)
 
