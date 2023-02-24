@@ -242,7 +242,7 @@ for (x in 1:length(listloop)){
   }
   
   ## 2. Print domain name and ISO3 code to console
-  cat(x, '\t', domain, '\t', kba.c, '\n')  
+  print(Country)
   
 
   #if there are no pas in this country, sets output to zero and skips
@@ -252,7 +252,7 @@ for (x in 1:length(listloop)){
                           Country = Country,
                           original_area = kba.c$original_area,
                           kba_note = kba.c$kba_notes,
-                          error_note = "no PAs in this range")
+                          error_note = "no PAs in this country")
   } else {
     
     ##finds the overlap of the gmba-intersected kba and the pa
@@ -265,7 +265,7 @@ for (x in 1:length(listloop)){
                             Country = Country,
                             original_area = kba.c$original_area,
                             kba_note = kba.c$kba_notes,
-                            error_note = "error in overlap btwn PA and range")
+                            error_note = "error in overlap btwn PA and country")
       
       ## if there are no overlaps, we're just going to set these to zeros
     } else if (sum(ovkba) <= 0) {
@@ -274,7 +274,7 @@ for (x in 1:length(listloop)){
                             Country = Country,
                             original_area = kba.c$original_area, 
                             kba_note = kba.c$kba_notes,
-                            error_note = "no overlaps btwn PAs and kbas in this range")
+                            error_note = "no overlaps btwn PAs and kbas in this country")
       
       ##if there ARE overlaps between kbas and pas (e.g. some TRUES in the matrix): 
     } else {  
@@ -292,7 +292,7 @@ for (x in 1:length(listloop)){
         pa.c$STATUS_YR[pa.c$STATUS_YR == 0] <- base::sample(ryears, nrow(pa.c[pa.c$STATUS_YR == 0, ]), replace = T) ## selects a year randomly from the pool of possible years
       }
       
-      ## starts loop for all kba/gmba pairs
+      ## starts loop for all kba/country pairs
       for (z in 1:nrow(kba.c)){ 
         kbaz <- kba.c[z, ]
         head(kbaz)
