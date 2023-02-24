@@ -89,7 +89,7 @@ pas <- pas[!is.na(st_dimension(pas)),]
 as.character(unique(st_geometry_type(st_geometry(pas)))) ## what geometries are in the dataset
 
 #check for and repair any geometry issues
-if(sum(st_is_valid(pas)) < nrow(pas)) pas <- st_make_valid(pas)
+#if(sum(st_is_valid(pas)) < nrow(pas)) pas <- st_make_valid(pas)
 if(sum(st_is_valid(kbas)) < nrow(kbas)) kbas <- st_make_valid(kbas)
 
 ## convert factors to characters in the dataframes
@@ -240,6 +240,9 @@ for (x in 1:length(listloop)){
   } else {
     pa.c <- pas %>% filter(ISO3 == domain) ## protected areas within the domain
   }
+  
+  ## make this subset of PAs valid if not 
+  if(sum(st_is_valid(pa.c)) < nrow(pa.c)) pa.c <- st_make_valid(pa.c)
   
   ## 2. Print domain name and ISO3 code to console
   print(Country)
