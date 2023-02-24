@@ -53,9 +53,8 @@ ifelse(dir.exists("~/Box Sync/biodiversity_cmip6"),
 folder <- getwd()
 finfolder <- paste0(folder, "/processed_data/pa_kba_ovl") #folder where final file will be saved
 
-# You will need 2 additional files: KBA classes and iso country codes
-#kba_class <- read.csv("./raw_data/kba_class_2022.csv", sep = "")   ## file with types of kbas 
-isos <- read.csv("./raw_data/iso_country_codes.csv")   ## file with ISO codes; should be stored in the wkfolder specified above; no changes in 2 019, so 2018 file used
+# You will need a file with ISO country codes
+isos <- read.csv("./raw_data/iso_country_codes.csv")   ## file with ISO codes; should be stored in the folder specified above; no changes in 2 019, so 2018 file used
 
 #### 1.3 Read in shapefiles ----
 
