@@ -216,7 +216,7 @@ for (x in 1:length(listloop)){
   domain <- listloop[x]
   
   ## 1. Subset kbas and pas to this domain
-  kba.c <- kba %>% filter(ISO3 == domain)
+  kba.c <- kbas %>% filter(ISO3 == domain)
   Country <- kba.c$Country
   
   ##checks to see if this range has already been run
