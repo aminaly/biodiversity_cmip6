@@ -35,7 +35,7 @@ file <- brick(i)
 file_source <- str_extract(filename(file), "[^/]*$")
 
 #### load in cleaned KBA, and if not source file to make it ----
-kba_loc <- paste0(getwd(),"/raw_data/KBA2022/KBAsGlobal_2022_September_02_POL_noOverlaps.shp")
+kba_loc <- paste0(getwd(),"/processed_data/kba/KBAsGlobal_2022_September_02_POL_noOverlaps.shp")
 
 if(file.exists(kba_loc)) {
   kbas <- st_read(dsn = kba_loc, stringsAsFactors = F, crs = 4326) 

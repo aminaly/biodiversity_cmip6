@@ -62,8 +62,15 @@ isos <- read.csv("./raw_data/iso_country_codes.csv")   ## file with ISO codes; s
 pas <- st_read(dsn = "./processed_data/wdpa/clean_wdpa_terrestrial.shp")
 
 ## Pull in cleaned KBA
-if(!file.exists("./raw_data/KBA2022/KBAsGlobal_2022_September_02_POL_noOverlaps.shp")) source("./analysis/kba_cleaning.R")
-kbas <- st_read(dsn = "./raw_data/KBA2022/KBAsGlobal_2022_September_02_POL_noOverlaps.shp", stringsAsFactors = F, crs = 4326) 
+#### load in cleaned KBA, and if not source file to make it ----
+kba_loc <- paste0(getwd(),"/processed_data/kba/KBAsGlobal_2022_September_02_POL_noOverlaps.shp")
+
+if(file.exists(kba_loc)) {
+  kbas <- st_read(dsn = kba_loc, stringsAsFactors = F, crs = 4326) 
+} else {
+  source(paste0(getwd(), "/analysis/kba_cleaning.R"))
+  kbas <- st_read(dsn = kba_loc, stringsAsFactors = F, crs = 4326) 
+}
 ## fix column names 
 coln <- c("SitRecID", "Country", "ISO3", "NatName", "IntName", "SitArea", "IbaStatus",
           "KBAStatus", "AzeStatus", "AddedDate", "ChangeDate", "Source", "DelTxt",

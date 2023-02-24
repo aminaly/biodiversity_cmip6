@@ -17,7 +17,7 @@ sf::sf_use_s2(FALSE) ## to deal with some issues not fixable with st_make_valid
 ifelse(dir.exists("~/Box Sync/biodiversity_cmip6"),
        setwd("~/Box Sync/biodiversity_cmip6"),
        setwd("/oak/stanford/groups/omramom/group_members/aminaly/biodiversity_cmip6"))
-finfile <- paste0(getwd(), "/raw_data/KBA2022/KBAsGlobal_2022_September_02_POL_noOverlaps.shp") #folder where the files per country will be saved
+finfile <- paste0(getwd(), "/processed_data/kba/KBAsGlobal_2022_September_02_POL_noOverlaps.shp") #folder where the files per country will be saved
 
 #read in KBAs
 kbas <- st_read(dsn = paste0(getwd(), "/raw_data/KBA2022/KBAsGlobal_2022_September_02_POL.shp"), stringsAsFactors = F, crs = 4326) 
@@ -28,7 +28,7 @@ kbas$akba <- as.numeric(suppressWarnings(tryCatch({st_area(kbas$geometry, byid =
 kbas$kba_notes <- ""
 new_kbas <- c()
 
-intersecs_all <- st_intersects(kbas)
+intersecs_all <- st_intersects(kbas, sparse = F)
 
 ## run through intersections
 for(k in 1:nrow(intersecs_all)) {
@@ -43,7 +43,7 @@ for(k in 1:nrow(intersecs_all)) {
   
   ## start loop for KBA's that intersect with this one 
   for(i in 1:nrow(inter_kbas)) {
-    
+    print(i)
     intersec <- inter_kbas[i,]
     #is this the same polygon? if so, skip
     if(intersec$SitRecID == kba$SitRecID) next
@@ -82,10 +82,11 @@ for(k in 1:nrow(intersecs_all)) {
         }
       }
     #get rid of the info from the second kba/select columns 
-    kba <- kba %>% select(SitRecID, Country, ISO3, NatName, IntName, SitArea,
-                          IbaStatus, KbaStatus, AzeStatus, AddedDate, ChangeDate,
-                          Source, DelTxt, DelGeom, Shape_Leng, Shape_Area, akba, kba_notes,
-                          geometry)
+    kba <- kba %>% select(SitRecID, Region, Country, ISO3, NatName, IntName, FinCode,
+                          SitLat, SitLong, GISArea, IbaStatus, KbaStatus, AzeStatus, 
+                          AddedDate, ChangeDate, Source, DelTxt, DelGeom, KBA_Qual, 
+                          Shape_Leng, Shape_Area, LegacyKBA, Criteria, geometry, 
+                          akba, kba_notes)
   }
   # now we've done all the kba adjustments, add it in
   new_kbas <- rbind(kba, new_kbas)
