@@ -100,7 +100,12 @@ new_kbas <- new_kbas %>% rename(original_area = akba) %>%
 saveRDS(new_kbas, finfile)
 st_write(new_kbas, dsn = finfile)
 
+## add in area
 new_kbas$akba <- as.numeric(suppressWarnings(tryCatch({st_area(new_kbas$geometry, byid = FALSE)}, error=function(e){})))
+
+## add in class
+kba_class <- read.csv("./raw_data/KBA2022/kba_class_2022.csv")
+new_kbas <- left_join(new_kbas, kba_class %>% select(SitRecID, class = SitSystem), by = "SitRecID")
 
 st_write(new_kbas, dsn = finfile)
 

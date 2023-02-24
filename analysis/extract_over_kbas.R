@@ -44,13 +44,15 @@ if(file.exists(kba_loc)) {
   kbas <- st_read(dsn = kba_loc, stringsAsFactors = F, crs = 4326) 
 }
 
-## clean up column names and shorten if testing
+## clean up column names, select terrestrial, and shorten if testing
 coln <- c("SitRecID", "Country", "ISO3", "NatName", "IntName", "SitArea", "IbaStatus",
           "KBAStatus", "AzeStatus", "AddedDate", "ChangeDate", "Source", "DelTxt",
           "DelGeom", "Shape_Leng", "Shape_Area", "original_area", "kba_notes", 
-          "akba", "geometry")
+          "akba", "class", "geometry")
 colnames(kbas) <- coln
 if(TEST) kbas <- kbas %>% filter(ISO3 %in% c("BTN", "CHE")) 
+
+kbas <- kbas %>% filter(class == "Terrestrial")
 
 extent(file) <- extent(kbas)
 

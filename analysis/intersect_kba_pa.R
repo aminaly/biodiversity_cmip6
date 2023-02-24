@@ -59,6 +59,7 @@ isos <- read.csv("./raw_data/iso_country_codes.csv")   ## file with ISO codes; s
 
 #### 1.3 Read in shapefiles ----
 
+## read in cleaned PAs
 pas <- st_read(dsn = "./processed_data/wdpa/clean_wdpa_terrestrial.shp")
 
 ## Pull in cleaned KBA
@@ -75,10 +76,13 @@ if(file.exists(kba_loc)) {
 coln <- c("SitRecID", "Country", "ISO3", "NatName", "IntName", "SitArea", "IbaStatus",
           "KBAStatus", "AzeStatus", "AddedDate", "ChangeDate", "Source", "DelTxt",
           "DelGeom", "Shape_Leng", "Shape_Area", "original_area", "kba_notes", 
-          "akba", "geometry")
+          "akba", "class", "geometry")
 colnames(kbas) <- coln
  
 if("Shape" %in% names(pas)) pas <- pas %>% rename(geometry = Shape)
+
+## select only terrestrial
+kbas <- kbas %>% filter(class == "Terrestrial")
 
 #### TODO: CHECK GEOMETRY TYPES - continue from here: https://github.com/r-spatial/sf/issues/427
 pas <- pas[!is.na(st_dimension(pas)),]
