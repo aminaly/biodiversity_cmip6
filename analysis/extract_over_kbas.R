@@ -62,7 +62,7 @@ all_data <- c()
 print("starting clean kbas")
 for(j in 1:length(names(file))) {
   temp <- kbas %>% dplyr::select(SitRecID) %>% 
-    mutate(year = getZ(file[[j]]), source = file_source)
+    mutate(year = getZ(file[[j]]), source = file_source) %>% st_drop_geometry()
   
   ## make sure the layers align
   extent(file[[j]]) <- extent(kbas)
