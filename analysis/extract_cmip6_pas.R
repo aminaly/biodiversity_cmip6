@@ -32,6 +32,7 @@ cmip_files <- list.files("raw_data/CMIP6_for_Amina", pattern = "*.nc", full.name
 i <- cmip_files[rep]
 file <- brick(i)
 file_source <- str_extract(filename(file), "[^/]*$")
+file_source <- gsub("\\.[^.]*$", "", file_source)
 
 #### extract over all PAs ----
 #load in PAs, subset if necessary, and clean up

@@ -33,6 +33,7 @@ cmip_files <- list.files("raw_data/CMIP6_for_Amina", pattern = "*.nc", full.name
 i <- cmip_files[rep]
 file <- brick(i)
 file_source <- str_extract(filename(file), "[^/]*$")
+file_source <- gsub("\\.[^.]*$", "", file_source)
 
 #### load in cleaned KBA, and if not source file to make it ----
 kba_loc <- paste0(getwd(),"/processed_data/kba/KBAsGlobal_2022_September_02_POL_noOverlaps.shp")
@@ -78,7 +79,7 @@ print("finished")
 
 #save this out to make my life easier
 file_name <- paste0("./processed_data/cleankba_cmip_ovl/",file_source, ".csv")
-saveRDS(all_data, file_name)
+write.csv(all_data, file_name)
 
 
 # CODE FOR EXTRACTING ORIGINAL KBAs w/o cleaning
