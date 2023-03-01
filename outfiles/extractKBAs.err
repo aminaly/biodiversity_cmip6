@@ -1,46 +1,13 @@
 
-Attaching package: ‘dplyr’
-
-The following objects are masked from ‘package:raster’:
-
-    intersect, select, union
-
-The following objects are masked from ‘package:stats’:
-
-    filter, lag
-
-The following objects are masked from ‘package:base’:
-
-    intersect, setdiff, setequal, union
-
-Linking to GEOS 3.6.2, GDAL 3.4.1, PROJ 8.2.1; sf_use_s2() is TRUE
-Loading required package: Matrix
-
 The following have been reloaded with a version change:
   1) gcc/6.3.0 => gcc/10.1.0
 
 
-Attaching package: ‘lubridate’
-
-
 The following have been reloaded with a version change:
-The following objects are masked from ‘package:raster’:
+  1) gcc/10.1.0 => gcc/9.1.0
 
-    intersect, union
-
-  1) gcc/10.1.0 => gcc/9.1.0The following objects are masked from ‘package:base’:
-
-    date, intersect, setdiff, union
-
-
-
-Loading required package: sp
 
 Attaching package: ‘dplyr’
-
-The following objects are masked from ‘package:raster’:
-
-    intersect, select, union
 
 The following objects are masked from ‘package:stats’:
 
@@ -51,6 +18,14 @@ The following objects are masked from ‘package:base’:
     intersect, setdiff, setequal, union
 
 Linking to GEOS 3.6.2, GDAL 3.4.1, PROJ 8.2.1; sf_use_s2() is TRUE
+Loading required package: sp
+
+Attaching package: ‘raster’
+
+The following object is masked from ‘package:dplyr’:
+
+    select
+
 Loading required package: Matrix
 
 Attaching package: ‘lubridate’
@@ -63,3 +38,8 @@ The following objects are masked from ‘package:base’:
 
     date, intersect, setdiff, union
 
+slurmstepd: error: *** JOB 11146428 ON sh02-09n71 CANCELLED AT 2023-02-28T16:35:36 ***
+slurmstepd: error: *** JOB 11158539 ON sh02-09n65 CANCELLED AT 2023-02-28T16:35:36 ***
+slurmstepd: error: *** JOB 11162507 ON sh02-09n72 CANCELLED AT 2023-02-28T16:35:36 ***
+slurmstepd: error: *** JOB 11156857 ON sh02-09n68 CANCELLED AT 2023-02-28T16:35:36 ***
+slurmstepd: error: *** JOB 11164640 ON sh02-09n66 CANCELLED AT 2023-02-28T16:35:36 ***
