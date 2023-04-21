@@ -19,7 +19,7 @@ library(quantreg)
 library(jtools)
 library(sf)
 library(gridExtra)
-library(report)
+#library(report)
 
 #### Set Global Vars ----
 CLEAN = FALSE ##switch to false if you want to use original KBAs
@@ -226,11 +226,11 @@ ggplot(ndvi_vars, aes(x = GOV_TYPE, y = mean_ndvi)) +
   theme_bw()
 
 aov_ndvi <- aov(mean_ndvi ~ GOV_TYPE, data = ndvi_vars)
-report(aov_ndvi)
+#report(aov_ndvi)
 plot(TukeyHSD(aov_ndvi), las=1,cex.axis=0.4, sub = "mean_ndvi")
 
 aov_ndvi <- aov(max_ndvi ~ GOV_TYPE, data = ndvi_vars)
-report(aov_ndvi)
+#report(aov_ndvi)
 plot(TukeyHSD(aov_ndvi), las=1,cex.axis=0.4, sub = "max ndvi")
 
 dev.off()
