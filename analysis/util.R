@@ -4,8 +4,17 @@
 library(raster)
 library(sp)
 library(dplyr)
+library(sf)
+library(dplyr)
+library(tidyverse)
+library(lwgeom)
+library(ggplot2)
+library(gifski)
+library(transformr)
+library(RColorBrewer)
+library(animation)
 
-## Clean PAs -- strategy imitates official methodology used to clean PAs
+#### Clean PAs -- strategy imitates official methodology used to clean PAs ----
 ## for SDG 15.4.1 (without ISO3 edits)
 clean_pas <- function(location) {
   
@@ -46,11 +55,72 @@ clean_pas <- function(location) {
   
 }
 
-## creates an input file to be used in the ML model on python (or here idk yet) 
-## note model name should have .nc but not .csv
+#### Get cummulative KBA Coverage given output of kba_pa_ovl ----
+
+cummulative_kba <- function(data, years = c(2022), level = "kba") {
+  ## set working directory
+  ifelse(dir.exists("~/Box Sync/biodiversity_cmip6"),
+         setwd("~/Box Sync/biodiversity_cmip6"),
+         setwd("/oak/stanford/groups/omramom/group_members/aminaly/biodiversity_cmip6"))
+  
+  td <- format(Sys.Date(), "%m_%Y")
+  
+  fin <- paste0("./processed_data/pa_kba_ovl/cummulative_coverage_", level, min(years), max(years), ".csv")
+  if(file.exists(fin)) return(read.csv(fin))
+    
+  ## Set NA ovl to 0
+  results <- data %>% mutate(ovl = ifelse(is.na(ovl), 0, ovl))
+  
+  ## create dataframe of all years with all ID vars
+  uniqids <- unique(results %>% dplyr::select(SitRecID, kba, Country))
+  results_all_years <- merge(uniqids , c(min(results$year, na.rm = T):2022)) 
+  results_all_years <- results_all_years %>% rename(year = y)
+  
+  ## join with full run, get rid of NA years (those with issues calculating) , 
+  #and set NA ovl to 0 (no additional coverage that year)
+  results_all_years <- left_join(results_all_years, results, 
+                                 by = c(names(uniqids), "year"))
+  results_all_years <- results_all_years %>% 
+    mutate(ovl = ifelse(is.na(ovl), 0, ovl)) %>% 
+    dplyr::select(-c(percPA))
+  
+  ## calculate cumulative coverage 
+  results_all_years <- results_all_years  %>% 
+    mutate(percPA = (ovl/kba) * 100) %>% 
+    group_by(SitRecID, Country) %>% 
+    mutate(cum_overlap = cumsum(ovl)) %>%
+    mutate(cum_percPA = (cum_overlap/kba) * 100)
+  
+  ## select only the years necessary. If no year given, 2022
+  return_data <- results_all_years %>% filter(year %in% years)
+  
+  ## this will be the data that creates all the other aggregations
+  if(level == "kba") {
+    write.csv(return_data, fin)
+    return(return_data)
+  } else {
+    write.csv(return_data, 
+              paste0("./processed_data/pa_kba_ovl/cummulative_coverage_kba", 
+                     min(years), max(years), ".csv")) 
+  }
+  
+  ## calculate cummulative country 
+  results_all_years_country <- results_all_years %>% 
+    group_by(year, Country) %>%
+    summarize(kba_area = sum(unique(kba), na.rm = T),
+              cum_overlap = sum(cum_overlap, na.rm = T)) %>%
+    mutate(cum_percPA = (cum_overlap/kba_area) * 100) %>%
+    filter(cum_year %in% years)
+  
+  write.csv(results_all_years_country, fin)
+  return(results_all_years_country)
+}
+
+#### Create an input file to be used in the ML model on python (or here idk yet)  ----
+## note model name should include it's extension
 get_input_hist <- function(model, processed_data_loc = NA) {
   
-  final_loc <- paste0(getwd(), "/processed_data/input_data/", model, ".csv")
+  final_loc <- paste0(getwd(), "/processed_data/input_data/", model)
   if(is.na(processed_data_loc)) processed_data_loc <- paste0(getwd(), "/processed_data/") 
   
   ## check to see if this has been done before. If so, pick it up
@@ -63,7 +133,7 @@ get_input_hist <- function(model, processed_data_loc = NA) {
   oldwd <- getwd()
 
   #read in data needed, combine, and filter
-  cmip6 <- read.csv(paste0(processed_data_loc, "cmip6_pa_ovl/", model, ".csv"))
+  cmip6 <- read.csv(paste0(processed_data_loc, "cmip6_pa_ovl/", model))
   ndvi <- read_csv(paste0(processed_data_loc, "ndvi/ndvi_pa_ovl.csv"))
   
   #combine
