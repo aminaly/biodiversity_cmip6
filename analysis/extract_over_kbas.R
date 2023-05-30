@@ -61,8 +61,8 @@ extent(file) <- extent(kbas)
 
 #### now extract over these cleaned up KBAs and save ----
 
-gcm_name <- str_split(source, "_")[[1]][3]
-measure <- str_split(source, "_")[[1]][1]
+gcm_name <- str_split(file_source, "_")[[1]][3]
+measure <- str_split(file_source, "_")[[1]][1]
 
 all_data <- c()
 print("starting clean kbas")
