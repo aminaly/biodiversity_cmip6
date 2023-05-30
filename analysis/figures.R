@@ -18,7 +18,7 @@ library(interactions)
 library(quantreg)
 library(jtools)
 library(sf)
-library(gridExtra)
+#library(gridExtra)
 #library(report)
 
 #### Set Global Vars ----
@@ -150,7 +150,7 @@ for(file in all_cmips) {
     theme_bw())
   
   #### protection status as of 2022
-  paste(ggplot(data = kt_g %>% filter(yr_grp == "2015-2030")) +
+  paste(ggplot(data = kt_g) +
     ggtitle(paste(name, "Avg Temperature every 15 years")) +
     geom_sf(data = country, size = 0.002, fill = "#d9f0a3") +
     geom_sf(data = kt_g, size = 0.0002, aes(fill = protected)) +
@@ -161,11 +161,13 @@ for(file in all_cmips) {
 }
 
 #### 4 models box and whisker ----
-ggplot(kba_2022_cmip, aes(model, mean, group = model)) +
+a <- kba_2022_cmip %>% mutate(gp = ifelse(year < 2050, "2015-2050", "2051 - 2100"))
+ggplot(a, aes(model, mean, group = model)) +
   geom_boxplot(aes(fill = model), outlier.alpha = .1) +
   #scale_fill_brewer(palette = "Oranges") +
-  facet_wrap(~ yr_grp, nrow = 3)
-  labs(title = "Annual Mean Temperatures, every 15 years")
+  facet_wrap(~ gp, nrow = 2) + 
+  labs(title = "Annual Mean Temperatures") +
+  theme_bw()
 
 a <- kba_2022_cmip %>% filter(year==2015) %>% ungroup() %>% dplyr::select(SitRecID, mean, model) 
 b <- kba_2022_cmip %>% filter(year==2100) %>% ungroup() %>% dplyr::select(SitRecID, mean, model)
@@ -176,7 +178,8 @@ kt <- left_join(kt, kba_2022 %>% select(SitRecID, protected), by = "SitRecID")
 ggplot(kt, aes(model, dif)) +
   geom_boxplot(outlier.alpha = .1, aes(fill = model)) +
   #scale_fill_brewer(palette = "Oranges") +
-  labs(title = "Expected Temperature Difference 2015-2100")
+  labs(title = "Expected Temperature Difference 2015-2100") +
+  theme_bw()
 
 
 #### Plots having to do with protections & governance ----
@@ -192,12 +195,12 @@ ggplot(data = kt %>% mutate(temp_grp = cut(dif, 4)), aes(temp_grp, group = prote
   geom_bar(aes(fill = factor(protected, levels = c("FP", "P", "NP")))) +
   labs(xlab = "°C Change from 2015 to 2100", ylab = "Number of KBAs", fill = "KBA Coverage") +
   scale_fill_manual(values = c("#4d9221", "#e6f5d0", "#c51b7d")) +
-  facet_wrap(~model)
+  facet_wrap(~model) +
   theme_bw()
 
 #### governance ----
 kba_wdpa_g <- left_join(kba_wdpa, pas %>% select(WDPAID, geometry))
-kba_wdpa_g <- kba_wdpa_g %>% st_set_geometry("geometry") %>% filter(year = 2022)
+kba_wdpa_g <- kba_wdpa_g %>% st_set_geometry("geometry") %>% filter(year == 2022)
 
 ggplot(data = kba_wdpa_g) +
   ggtitle(paste(name, "Governance Type")) +
@@ -209,7 +212,16 @@ ggplot(data = kba_wdpa_g) +
   theme_bw()
 
 #### plots having to do with NDVI ----
-ndvi_vars <- kba_wdpa %>% select(GOV_TYPE, max_ndvi, mean_ndvi)
+ndvi_vars <- kba_wdpa %>% select(GOV_TYPE, max_ndvi, mean_ndvi, year)
+
+ggplot(ndvi_vars, aes(year, mean_ndvi, group = GOV_TYPE)) +
+  geom_smooth(aes(group=GOV_TYPE, color=as.factor(GOV_TYPE))) +
+  theme_bw()
+
+
+ggplot(ndvi_vars, aes(year, max_ndvi, group = GOV_TYPE)) +
+  geom_smooth(aes(group=GOV_TYPE, color=as.factor(GOV_TYPE))) +
+  theme_bw()
 
 ggplot(ndvi_vars, aes(x = GOV_TYPE, y = max_ndvi)) + 
   geom_boxplot(aes(color = GOV_TYPE)) + 
@@ -236,14 +248,15 @@ plot(TukeyHSD(aov_ndvi), las=1,cex.axis=0.4, sub = "max ndvi")
 dev.off()
 
 #### general plots ----
-kba_wdpa_g <- left_join(kba_wdpa, pas %>% select(WDPAID, geometry))
-kba_wdpa_g <- kba_wdpa_g %>% group_by(SitRecID) %>% summarize(mn = mean(mean_ndvi, na.rm = T))
+k <- kba_wdpa %>% group_by(SitRecID, WDPAID) %>% summarize(mn = mean(mean_ndvi, na.rm = T))
+kba_wdpa_g <- left_join(k, pas %>% select(WDPAID, geometry), by = "WDPAID")
+kba_wdpa_g <- kba_wdpa_g %>% st_set_geometry("geometry")
 
 ggplot(data = kba_wdpa_g) +
-  ggtitle(paste(name, "Governance Type")) +
+  ggtitle(paste(name, "Average NDVI")) +
   geom_sf(data = country, size = 0.002, fill = "#d9f0a3") +
   geom_sf(data = kba_wdpa_g, size = 0.0002, aes(fill = mn)) +
-  scale_fill_continuous(na.value = "grey", color = "greens") +
+  scale_fill_distiller(na.value = "grey", direction = 1, palette = "Greens") +
   labs(colour="Average NDVI Values (protected areas only)", 
        fill = "Average NDVI") +
   theme_bw()

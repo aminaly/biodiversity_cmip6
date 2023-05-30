@@ -149,6 +149,11 @@ get_input_hist <- function(model, processed_data_loc = NA) {
   return(data)
 }
 
+#### Gets the WDPAID. Used in an apply function in Figures.R ----
+get_wdpaid <- function(index, pas) {
+  pas[index,]
+}
+
 
 
 

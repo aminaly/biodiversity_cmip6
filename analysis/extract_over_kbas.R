@@ -25,11 +25,12 @@ library(exactextractr)
 args <- commandArgs(trailingOnly = TRUE)
 rep <- as.numeric(args[1])
 
-## test run? If so, just perform this on KBAs in USA
-TEST <- FALSE
+## test run? If so, just perform this on KBAs in subset of locations
+TEST <- TRUE
+locs <- c("ZAF", "USA", "CRI")
 
 #get list of allCMIP and select the one for this task
-cmip_files <- list.files("raw_data/CMIP6_for_Amina", pattern = "*.nc", full.names = T)
+cmip_files <- list.files("raw_data/extreme-indices-cmip6", pattern = "*.nc", full.names = T)
 i <- cmip_files[rep]
 file <- brick(i)
 file_source <- str_extract(filename(file), "[^/]*$")
@@ -52,18 +53,25 @@ coln <- c("SitRecID", "Region", "Country", "ISO3", "NatName", "IntName", "FinCod
           "DelGeom", "KBA_Quality", "Shape_Long", "Shape_Area", "LegacyKBA", "Criteria",
           "original_area", "kba_notes", "akba", "class", "geometry")
 names(kbas) <- coln
-if(TEST) kbas <- kbas %>% filter(ISO3 %in% c("BTN", "CHE")) 
+if(TEST) kbas <- kbas %>% filter(ISO3 %in% locs) 
 
 kbas <- kbas %>% filter(class == "Terrestrial")
 
 extent(file) <- extent(kbas)
 
 #### now extract over these cleaned up KBAs and save ----
+
+gcm_name <- str_split(source, "_")[[1]][3]
+measure <- str_split(source, "_")[[1]][1]
+
 all_data <- c()
 print("starting clean kbas")
 for(j in 1:length(names(file))) {
   temp <- kbas %>% dplyr::select(SitRecID) %>% 
-    mutate(year = getZ(file[[j]]), source = file_source) %>% st_drop_geometry()
+    mutate(date = getZ(file[[j]]), source = file_source,
+           gcm  = gcm,
+           measure = measure)
+  %>% st_drop_geometry()
   
   ## make sure the layers align
   extent(file[[j]]) <- extent(kbas)
@@ -78,7 +86,7 @@ for(j in 1:length(names(file))) {
 print("finished")
 
 #save this out to make my life easier
-file_name <- paste0("./processed_data/cleankba_cmip_ovl/",file_source, ".csv")
+file_name <- paste0("./processed_data/extremes_kbas/",file_source, ".csv")
 write.csv(all_data, file_name)
 
 
