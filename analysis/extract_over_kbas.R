@@ -62,16 +62,15 @@ extent(file) <- extent(kbas)
 #### now extract over these cleaned up KBAs and save ----
 
 gcm_name <- str_split(file_source, "_")[[1]][3]
-measure <- str_split(file_source, "_")[[1]][1]
+msure <- str_split(file_source, "_")[[1]][1]
 
 all_data <- c()
 print("starting clean kbas")
 for(j in 1:length(names(file))) {
   temp <- kbas %>% dplyr::select(SitRecID) %>% 
     mutate(date = getZ(file[[j]]), source = file_source,
-           gcm  = gcm,
-           measure = measure)
-  %>% st_drop_geometry()
+           gcm  = gcm_name,
+           measure = msure) %>% st_drop_geometry()
   
   ## make sure the layers align
   extent(file[[j]]) <- extent(kbas)
