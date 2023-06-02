@@ -30,7 +30,7 @@ TEST <- TRUE
 locs <- c("ZAF")
 
 #get list of allCMIP and select the one for this task
-cmip_files <- list.files("raw_data/extreme-indices-cmip6", pattern = "*.nc", full.names = T)
+cmip_files <- list.files("raw_data/extreme-indices-cmip6-2", pattern = "*.nc", full.names = T)
 i <- cmip_files[rep]
 file <- brick(i)
 file_source <- str_extract(filename(file), "[^/]*$")
