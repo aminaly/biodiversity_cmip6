@@ -25,13 +25,18 @@ library(sf)
 CLEAN = FALSE ##switch to false if you want to use original KBAs
 td <- format(Sys.Date(), "%m_%d_%Y")
 ERA <- "ssp370"
-COUNTRY <- "BRA"
+COUNTRY <- "ZAF"
 TYPE <- "Terrestrial"
-models <- c("ACCESS-CM2", "CNRM-CM6-1", "CanESM5", "GFDL-ESM4") ## list of the models we will use in this case
+indexes <- c("*") ## extreme indexes for pattern matching (* if all)
 sf::sf_use_s2(FALSE) ## to deal with some issues not fixable with st_make_valid
+ids <- c(7076, 7086, 7090, 7092, 7095, 7097, 7100, 7101, 7102, 7103, 7107,
+         7116, 7117, 7124, 7131, 7132, 7136, 7139, 7142, 7147, 7149, 7152, 
+         7153, 7154, 7155, 7157, 7158, 7159, 7161, 7162, 7163, 7164, 7165,
+         7166, 7168, 7170, 7171, 7172, 7174, 7175, 32050, 32058, 44661, 44671)
 
 #### Get data ----
 world <- st_read(dsn = "./raw_data/WB_countries_Admin0_10m/WB_countries_Admin0_10m.shp", stringsAsFactors = F, crs = 4326) 
+world <- world %>% filter(ISO_A3 == COUNTRY)
 kba_class <- read_csv("./raw_data/KBA2022/kba_class_2022_clean.csv")[,-1]
 kba_protected_area <- read.csv("./processed_data/pa_kba_ovl/all_countries_2022.csv")
 kba_geometry <- st_read(dsn = "./processed_data/kba/KBAsGlobal_2022_September_02_POL_noOverlaps.shp", stringsAsFactors = F, crs = 4326) 
@@ -47,38 +52,76 @@ coln <- c("SitRecID", "Region", "Country", "ISO3", "NatName", "IntName", "FinCod
           "original_area", "kba_notes", "akba", "class", "geometry")
 names(kba_geometry) <- coln
 
-#### Clean and combine datasets ----
+## KBA dataset
+kbas <- left_join(kba_class %>% filter(ISO == COUNTRY, Type == TYPE),
+          kba_protected_area, by = c("Country", "SitRecID"))
+kbas <- kbas %>% mutate(climate_threat = ifelse(SitRecID %in% ids, T, F))
+kba_geometry <- kba_geometry %>% filter(ISO3 == COUNTRY)
 
-## subset all read in data based on global vars
-kba_class <- kba_class %>% filter(ISO == COUNTRY & Type == TYPE)
-kba_protected_area <- kba_protected_area %>% filter(SitRecID %in% unique(kba_class$SitRecID))
-kba_geometry <- kba_geometry %>% filter(SitRecID %in% unique(kba_class$SitRecID))
-
-kba_2022 <- cummulative_kba(kba_protected_area, years = c(2022), level ="kba")
-kba_2022 <- kba_2022 %>% dplyr::select(SitRecID, kba, Country, cum_year = year,
-                                       cum_overlap, cum_percPA) %>%
-  mutate(protected = ifelse(cum_percPA < 2, "NP", ifelse(cum_percPA >= 98, "FP", "P")))
-kba_country_2022 <- cummulative_kba(kba_protected_area, years = c(2022), level ="country")
-kba_country_2022 <- kba_country_2022 %>% dplyr::select(kba, Country, cum_year,
-                                                       cum_overlap, cum_percPA)  %>%
-  mutate(protected = ifelse(cum_percPA < 2, "NP", ifelse(cum_percPA >= 98, "FP", "P")))
-
-## get a list of WDPAIDs that match with KBAs
-intersections <- st_intersects(kba_geometry, pas)
-kba_wdpa <- c()
-for(i in 1:nrow(intersections)) {
-  indeces <- pas %>% slice(intersections[[i]])
-  ifelse(nrow(indeces) == 0, WDPA <- NA, WDPA <- indeces %>% pull(WDPAID))
-  kba_wdpa <- rbind(kba_wdpa,
-                    cbind(SitRecID = kba_geometry[i,] %>% st_drop_geometry() %>% pull(SitRecID), 
-                          WDPAID = WDPA))
+plot_data <- c()
+for(index in indexes) {
+  if(index == "*") plot_data <- read.csv("./processed_data/extremes_kbas/all_plot_data.csv") break
+  data_list <- list.files("./processed_data/extremes_kbas/", full.names = T, pattern = index)
+  for(file in data_list) {
+    data <- read_csv(file)[,-1]
+    data <- data %>% filter(SitRecID %in% kbas$SitRecID) %>% 
+      mutate(year = year(date), year_group = cut(year, 8, labels = F)) %>% select(-source)
+    plot_data <- rbind(plot_data, data)
+  }
 }
-kba_wdpa <- as.data.frame(kba_wdpa)
-
-kba_wdpa <- left_join(kba_2022, kba_wdpa, by = "SitRecID")
-kba_wdpa <- left_join(kba_wdpa, ndvi, by = c("WDPAID"))
 
 #### Start Plots ----
 pdf(paste0("./visuals/view_", td, ".pdf")) ## start pdf up here
 
-#### Extremes
+#### Loop through and make the same figures for each measure
+next_10 <- plot_data %>% group_by(SitRecID, year_group, measure) %>%
+  summarize(mean_sd = sd(mean), mean_index = mean(mean)) %>% filter(year_group < 3) %>% 
+  pivot_wider(id_cols = c(SitRecID, measure), names_from = year_group, values_from = c("mean_sd", "mean_index")) %>% 
+  mutate(diff_mean = mean_index_2 - mean_index_1, 
+         climate_threat = ifelse(SitRecID %in% ids, "Y", "N"))
+
+for(index in unique(next_10$measure)) {
+  
+  ### Average of index for every 10 years (about)
+  next_10_i <- next_10 %>% filter(measure == index)
+  next_10_i <- left_join(next_10_i, kba_geometry) %>% st_set_geometry("geometry")
+  
+  paste(ggplot(data = next_10_i) +
+    ggtitle("Change in Index (avg 2036-2026 minus 2025-2015)") +
+    geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
+    geom_sf(data = next_10_i, size = 0.0002, aes(fill = diff)) +
+    coord_sf(ylim = c(-22, -35)) +
+    scale_fill_continuous(na.value = "grey") +
+    labs(fill = "Change in Index") +
+    theme_bw())
+  
+  paste(ggplot(data = next_10_i) +
+    ggtitle("SD 2025-2015") +
+    geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
+    geom_sf(data = next_10_i, size = 0.0002, aes(fill = mean_sd_1)) +
+    coord_sf(ylim = c(-22, -35)) +
+    scale_fill_continuous(na.value = "grey") +
+    labs(fill = "Standard Deviation") +
+    theme_bw())
+  
+  paste(ggplot(data = next_10_i) +
+    ggtitle("SD 2026-2036") +
+    geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
+    geom_sf(data = next_10_i, size = 0.0002, aes(fill = mean_sd_2)) +
+    coord_sf(ylim = c(-22, -35)) +
+    scale_fill_continuous(na.value = "grey") +
+    labs(fill = "Standard Deviation") +
+    theme_bw())
+  
+  paste(ggplot(data = next_10_i, aes(x = mean_index_1, y = mean_index_2)) +
+    geom_point(aes(color = climate_threat)) +
+    facet_wrap(~ measure) +
+    xlab("Average Index 2015-2025") + ylab("Average Index 2026-2036") +
+    theme_bw())
+  
+}
+
+dev.off()
+
+
+

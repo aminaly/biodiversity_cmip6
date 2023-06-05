@@ -81,6 +81,7 @@ kba_wdpa <- left_join(kba_wdpa, ndvi, by = c("WDPAID"))
 #### Start Plots ----
 pdf(paste0("./visuals/view_", td, ".pdf")) ## start pdf up here
 
+#### Extremes
 #### Plots dealing with CMIP6 models ----
 #### loop through selected models, make plots for individuals and aggregate data ----
 ## run through all CMIP models overlapped with KBA and aggregate
@@ -246,6 +247,7 @@ aov_ndvi <- aov(max_ndvi ~ GOV_TYPE, data = ndvi_vars)
 plot(TukeyHSD(aov_ndvi), las=1,cex.axis=0.4, sub = "max ndvi")
 
 dev.off()
+
 
 #### general plots ----
 k <- kba_wdpa %>% group_by(SitRecID, WDPAID) %>% summarize(mn = mean(mean_ndvi, na.rm = T))
