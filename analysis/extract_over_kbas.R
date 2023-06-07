@@ -28,9 +28,10 @@ rep <- as.numeric(args[1])
 ## test run? If so, just perform this on KBAs in subset of locations
 TEST <- TRUE
 locs <- c("ZAF")
+models <- c("r99p", "r95p", "tx90p", "tn90p", "wsdi")
 
 #get list of allCMIP and select the one for this task
-cmip_files <- list.files("raw_data/extreme-indeces-cmip6-2", pattern = "*.nc", full.names = T)
+cmip_files <- list.files("raw_data/extreme-indexes-cmip6-3", pattern = paste(models, collapse = "|"), full.names = T)
 i <- cmip_files[rep]
 file <- brick(i)
 file_source <- str_extract(filename(file), "[^/]*$")
