@@ -107,10 +107,12 @@ extreme_comp_data <- left_join(hist %>% ungroup %>% dplyr::select(-scenario),
          diff_second = ifelse(measure %in% c("tn90pETCCDI", "tx90pETCCDI", "txxETCCDI"), 
                               mean_index_second - mean_index,
                               ((mean_index_second - mean_index)/mean_index)*100))
-extreme_comp_data <- left_join(extreme_comp_data, categories, by = "measure")
 
 categories <- as.data.frame(cbind(measure = unique(extreme_comp_data$measure),
                                   category = c("precip", "precip", "precip", "precip", "temp", "temp", "temp", "temp")))
+
+extreme_comp_data <- left_join(extreme_comp_data, categories, by = "measure")
+
 
 ## create dataset of goverance types
 intersections <- st_intersects(kba_geometry, pas)
