@@ -9,7 +9,7 @@ library(dplyr)
 library(tidyverse)
 library(lwgeom)
 library(ggplot2)
-library(transformr)
+#library(transformr)
 library(RColorBrewer)
 
 #### Clean PAs -- strategy imitates official methodology used to clean PAs ----
