@@ -36,12 +36,12 @@ ids <- c(7076, 7086, 7090, 7092, 7095, 7097, 7100, 7101, 7102, 7103, 7107,
          7166, 7168, 7170, 7171, 7172, 7174, 7175, 32050, 32058, 44661, 44671)
 
 #### Get data ----
-world <- st_read(dsn = "./raw_data/WB_countries_Admin0_10m/WB_countries_Admin0_10m.shp", stringsAsFactors = F, crs = 4326) 
-world <- world %>% filter(ISO_A3 == COUNTRY)
+#world <- st_read(dsn = "./raw_data/WB_countries_Admin0_10m/WB_countries_Admin0_10m.shp", stringsAsFactors = F, crs = 4326) 
+#world <- world %>% filter(ISO_A3 == COUNTRY)
 kba_class <- read_csv("./raw_data/KBA2022/kba_class_2022_clean.csv")[,-1]
 kba_protected_area <- read.csv("./processed_data/pa_kba_ovl/all_countries_2022.csv")
 kba_geometry <- st_read(dsn = "./processed_data/kba/KBAsGlobal_2022_September_02_POL_noOverlaps.shp", stringsAsFactors = F, crs = 4326) 
-climate_zones  <- st_read(dsn = "./raw_data/climate_zones/other_climate_2007_koppen_geiger.shp")
+#climate_zones  <- st_read(dsn = "./raw_data/climate_zones/other_climate_2007_koppen_geiger.shp")
 pas <- st_read(dsn = "./processed_data/wdpa/clean_wdpa_terrestrial.shp")
 ndvi <- read.csv("./processed_data/ndvi/ndvi_pa_ovl.csv")
 
