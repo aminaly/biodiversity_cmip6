@@ -125,7 +125,7 @@ governance <- as.data.frame(governance)
 
 governance <- left_join(kbas, governance, by = "SitRecID")
 governance <- left_join(governance, ndvi %>%
-                          filter(year == 2022, ISO3 == COUNTRY) %>% 
+                          filter(year == 2022, ISO3 == COUNTRY, !is.na(kba)) %>% 
                           select(WDPAID, GOV_TYPE, DESIG_TYPE), 
                         by = c("WDPAID"))
 

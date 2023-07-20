@@ -9,10 +9,8 @@ library(dplyr)
 library(tidyverse)
 library(lwgeom)
 library(ggplot2)
-library(gifski)
 library(transformr)
 library(RColorBrewer)
-library(animation)
 
 #### Clean PAs -- strategy imitates official methodology used to clean PAs ----
 ## for SDG 15.4.1 (without ISO3 edits)
