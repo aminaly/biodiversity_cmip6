@@ -34,8 +34,6 @@ ids <- c(7076, 7086, 7090, 7092, 7095, 7097, 7100, 7101, 7102, 7103, 7107,
          7116, 7117, 7124, 7131, 7132, 7136, 7139, 7142, 7147, 7149, 7152, 
          7153, 7154, 7155, 7157, 7158, 7159, 7161, 7162, 7163, 7164, 7165,
          7166, 7168, 7170, 7171, 7172, 7174, 7175, 32050, 32058, 44661, 44671)
-categories <- as.data.frame(cbind(measure = unique(extreme_comp_data$measure),
-                   category = c("precip", "precip", "precip", "precip", "temp", "temp", "temp", "temp")))
 
 #### Get data ----
 world <- st_read(dsn = "./raw_data/WB_countries_Admin0_10m/WB_countries_Admin0_10m.shp", stringsAsFactors = F, crs = 4326) 
@@ -110,6 +108,9 @@ extreme_comp_data <- left_join(hist %>% ungroup %>% dplyr::select(-scenario),
                               mean_index_second - mean_index,
                               ((mean_index_second - mean_index)/mean_index)*100))
 extreme_comp_data <- left_join(extreme_comp_data, categories, by = "measure")
+
+categories <- as.data.frame(cbind(measure = unique(extreme_comp_data$measure),
+                                  category = c("precip", "precip", "precip", "precip", "temp", "temp", "temp", "temp")))
 
 ## create dataset of goverance types
 intersections <- st_intersects(kba_geometry, pas)
