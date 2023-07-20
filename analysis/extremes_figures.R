@@ -28,7 +28,7 @@ td <- format(Sys.Date(), "%m_%d_%Y")
 COUNTRY <- "ZAF"
 TYPE <- "Terrestrial"
 ERA <- "ssp370"
-indexes <- c("cddETCCDI", "cwdETCCDI", "r95pETCCDI", "r99pETCCDI", "tn90pETCCDI", "tx90pETCCDI", "txxETCCDI", "wsdiETCCDI")  ## extreme indexes for pattern matching (* if all)
+indexes <- c("cddETCCDI", "r95pETCCDI", "txxETCCDI", "wsdiETCCDI")  ## extreme indexes for pattern matching (* if all)
 sf::sf_use_s2(FALSE) ## to deal with some issues not fixable with st_make_valid
 ids <- c(7076, 7086, 7090, 7092, 7095, 7097, 7100, 7101, 7102, 7103, 7107,
          7116, 7117, 7124, 7131, 7132, 7136, 7139, 7142, 7147, 7149, 7152, 
@@ -77,6 +77,7 @@ if(file.exists("./processed_data/extremes_kbas/all_plot_data.csv")) {
              scenario = str_split(source, "_")[[1]][4]) %>% select(-source)
     extreme_data <- rbind(extreme_data, data)
   }
+  write.csv(extreme_data, "./processed_data/extremes_kbas/all_plot_data.csv")
 }
 
 extreme_data <- extreme_data %>% mutate(climate_threat = ifelse(SitRecID %in% ids, "Y", "N"))
@@ -137,38 +138,84 @@ governance <- left_join(governance, ndvi %>%
 
 model_agreement <- c()
 ## as in Singh et al 2014 and Horton et al. 2014 which use IPCC thresholds of 66% agreement 
-for(site in unique(extreme_data$SitRecID)) {
-  extreme_data <- extreme_data %>% mutate(climate_threat = ifelse(SitRecID %in% ids, "Y", "N"))
-  for(m in unique(extreme_data$measure)) {
-    for(boot in 1:1000) {
+extreme_data <- extreme_data %>% mutate(climate_threat = ifelse(SitRecID %in% ids, "Y", "N"))
+measures <- unique(extreme_data$measure)
+sites <- unique(extreme_data$SitRecID)
+reps <- 1000
+
+## bootstrap each site
+for(m in 1:length(measures)) {
+  measure <- measures[m]
+  print(measure)
+  
+  ## pull this measure
+  hist <- extreme_data %>% 
+    filter(measure == m,
+           scenario == "historical",
+           year %in% c(1995:2014))  
+  comp1 <- extreme_data %>% 
+    filter(measure == m,
+           year %in% c(2015:2025)) %>% 
+    filter(if(ERA != "") scenario == ERA)
+  comp2 <- extreme_data %>% 
+    filter(measure == m,
+           year %in% c(2026:2036)) %>% 
+    filter(if(ERA != "") scenario == ERA)
+  comp <- extreme_data %>% 
+    filter(measure == m,
+           year %in% c(2015:2036)) %>% 
+    filter(if(ERA != "") scenario == ERA)
+  
+  ## pull this site, sample 1000 times and exit loop with 95% CI, % >0, and %<0 
+  for(s in 1:length(sites)) {
+    site <- sites[s]
+    print(site)
+    
+    hist_m <- hist %>% filter(SitRecID == site)
+    comp1_m <- comp1 %>% filter(SitRecID == site)
+    comp2_m <- comp2 %>% filter(SitRecID == site)
+    comp_m <- comp %>% filter(SitRecID == site)
+    
+    boots <- c()
+    
+    for(boot in 1:reps) {
       
-      hist <- extreme_data %>% 
-        filter(SitRecID == site,
-               measure == m,
-               scenario == "historical",
-               year %in% c(1995:2014)) %>% 
-        group_by(SitRecID, scenario, measure, climate_threat)
-      
-      hist_m <- sample_n(hist, nrow(hist), replace = T) %>% 
+      h <- sample_n(hist_m, nrow(hist_m), replace = T) %>% 
+        summarize(mean_index = mean(mean, na.rm = T)) %>% pull(mean_index)
+      c1 <- sample_n(comp1_m, nrow(comp1_m), replace = T) %>%
+        summarize(mean_index = mean(mean, na.rm = T)) %>% pull(mean_index)
+      c2 <- sample_n(comp2_m, nrow(comp2_m), replace = T) %>%
+        summarize(mean_index = mean(mean, na.rm = T)) %>% pull(mean_index)
+      c <- sample_n(comp_m, nrow(comp_m), replace = T) %>%
         summarize(mean_index = mean(mean, na.rm = T)) %>% pull(mean_index)
       
-      comp <- extreme_data %>% 
-        filter(SitRecID == site, 
-               measure == m,
-               year %in% c(2015:2036)) %>% 
-        filter(if(ERA != "") scenario == ERA) %>%
-        group_by(SitRecID, scenario, measure)
-      
-      comp_m <- sample_n(comp, nrow(comp), replace = T) %>%
-        summarize(mean_index = mean(mean, na.rm = T)) %>% pull(mean_index)
-      
-      model_agreement <- rbind(model_agreement, 
-                               c(site, m, hist_m, comp_m))
+      boots <- rbind(boots, cbind(firstdecade = (c1 - h)/h,
+                                  seconddecade = (c2 - h)/h, future = (c - h)/h))
     }
+    
+    ## using the 1000 boots of all 4, return summary row for this site and add to model agreement
+    low <- apply(boots, 2, quantile, c(0.025))
+
+    high <- apply(boots, 2, quantile, c(0.975))
+
+    over0 <- apply(boots, 2, function(x) {sum(x > 0)/ reps})
+
+    under0 <- apply(boots, 2, function(x) {sum(x < 0)/ reps})
+
+    over100 <- apply(boots, 2, function(x) {sum(abs(x) > 1)/ reps})
+
+    model_agreement <- rbind(model_agreement,
+                             cbind(SitRecID = site, measure = m, low, high,
+                                   over0, under0, over100))
+    
   }
+  
+ 
 }
 
-write.csv("./processed_data/model_agreement.csv")
+
+
+write.csv(model_agreement, "./processed_data/model_agreement.csv")
 # #### Start Plots ----
 # #### Figure 1 - Plot protection  ----
 # pdf(paste0("./visuals/protection_", td, ".pdf")) ## start pdf up here
