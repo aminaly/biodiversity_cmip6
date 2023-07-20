@@ -194,9 +194,9 @@ for(m in 1:length(measures)) {
     }
     
     ## using the 1000 boots of all 4, return summary row for this site and add to model agreement
-    low <- apply(boots, 2, quantile, c(0.025))
+    low <- apply(boots, 2, quantile, c(0.025), na.rm = T)
 
-    high <- apply(boots, 2, quantile, c(0.975))
+    high <- apply(boots, 2, quantile, c(0.975), na.rm = T)
 
     over0 <- apply(boots, 2, function(x) {sum(x > 0)/ reps})
 
