@@ -116,22 +116,22 @@ extreme_comp_data <- left_join(extreme_comp_data, categories, by = "measure")
 
 
 ## create dataset of goverance types
-intersections <- st_intersects(kba_geometry, pas)
-governance <- c()
-for(i in 1:nrow(intersections)) {
-  indeces <- pas %>% slice(intersections[[i]])
-  ifelse(nrow(indeces) == 0, WDPA <- NA, WDPA <- indeces %>% pull(WDPAID))
-  governance <- rbind(governance,
-                    cbind(SitRecID = kba_geometry[i,] %>% st_drop_geometry() %>% pull(SitRecID), 
-                          WDPAID = WDPA))
-}
-governance <- as.data.frame(governance)
-
-governance <- left_join(kbas, governance, by = "SitRecID")
-governance <- left_join(governance, ndvi %>%
-                          filter(year == 2022, ISO3 == COUNTRY, !is.na(kba)) %>% 
-                          select(WDPAID, GOV_TYPE, DESIG_TYPE), 
-                        by = c("WDPAID"))
+# intersections <- st_intersects(kba_geometry, pas)
+# governance <- c()
+# for(i in 1:nrow(intersections)) {
+#   indeces <- pas %>% slice(intersections[[i]])
+#   ifelse(nrow(indeces) == 0, WDPA <- NA, WDPA <- indeces %>% pull(WDPAID))
+#   governance <- rbind(governance,
+#                     cbind(SitRecID = kba_geometry[i,] %>% st_drop_geometry() %>% pull(SitRecID), 
+#                           WDPAID = WDPA))
+# }
+# governance <- as.data.frame(governance)
+# 
+# governance <- left_join(kbas, governance, by = "SitRecID")
+# governance <- left_join(governance, ndvi %>%
+#                           filter(year == 2022, ISO3 == COUNTRY, !is.na(kba)) %>% 
+#                           select(WDPAID, GOV_TYPE, DESIG_TYPE), 
+#                         by = c("WDPAID"))
 
 
 #### Model Agreement ----
@@ -213,225 +213,213 @@ for(m in 1:length(measures)) {
  
 }
 
-
-
 write.csv(model_agreement, "./processed_data/model_agreement.csv")
-# #### Start Plots ----
-# #### Figure 1 - Plot protection  ----
-# pdf(paste0("./visuals/protection_", td, ".pdf")) ## start pdf up here
-# 
-# data_i <- left_join(kbas, 
-#                     kba_geometry %>% 
-#                       filter(SitRecID %in% unique(kbas$SitRecID)) %>% 
-#                       select(SitRecID, geometry),
-#                     by = "SitRecID") %>% st_set_geometry("geometry") %>% 
-#   filter(!is.na(cum_percPA)) %>% rename(percent_protected = cum_percPA) 
-# 
-# ## current protection status by percent
-# print(ggplot(data = data_i) +
-#         ggtitle(paste("Current Protection Status")) +
-#         geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
-#         geom_sf(data = data_i, size = 0.0002, aes(fill = percent_protected)) +
-#         coord_sf(ylim = c(-22, -35)) +
-#         labs(fill = "Percent of KBA covered by Protected Areas") +
-#         scale_fill_gradient(low = "#edf8fb", high = "#006d2c", na.value = "grey") +
-#         theme_bw())
-# 
-# ## curernt protection status by group
-# data_i <- data_i %>% mutate(protected = fct_relevel(protected, c("FP", "P", "NP")))
-# print(ggplot(data = data_i) +
-#         ggtitle(paste("Current Coverage Group")) +
-#         geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
-#         geom_sf(data = data_i, size = 0.0002, aes(fill = protected)) +
-#         coord_sf(ylim = c(-22, -35)) +
-#         labs(fill = "Protection Progress") +
-#         scale_fill_manual(values = c("#4d9221", "#66c2a4", "#c51b7d")) +
-#         theme_bw())
-# 
-# ## map of climate threats
-# print(ggplot(data = data_i) +
-#         ggtitle(paste("Climate Threat")) +
-#         geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
-#         geom_sf(data = data_i, size = 0.0002, aes(fill = climate_threat)) +
-#         coord_sf(ylim = c(-22, -35)) +
-#         labs(fill = "IUCN Climate Threatened") +
-#         scale_fill_manual(values = c("#01665e", "#8c510a")) +
-#         theme_bw())
-# 
-# ## bar of protections
-# ggplot(data = data, aes(protected)) +
-#   geom_bar(aes(fill = factor(protected, levels = c("FP", "P", "NP")))) +
-#   labs(xlab = "protected", ylab = "Count of KBAs", fill = "KBA Coverage") +
-#   scale_fill_manual(values = c("#4d9221", "#66c2a4", "#c51b7d")) +
-#   theme_bw()
-# 
-# ## bar of protections and climate threats 
-# ggplot(data = data, aes(x = protected, alpha = climate_threat)) +
-#   geom_bar(position = "dodge", aes(fill = factor(protected, levels = c("FP", "P", "NP")))) +
-#   labs(xlab = "Protection Status", ylab = "Count of KBAs", fill = "KBA Coverage") +
-#   scale_fill_manual(values = c("#4d9221", "#66c2a4", "#c51b7d")) +
-#   theme_bw()
-# 
-# 
-# ## and who is in charge (governance type)
-# pas_i <- left_join(governance, pas %>% select(WDPAID, geometry), by = "WDPAID") %>% 
-#   st_set_geometry("geometry") %>%
-#   filter(!is.na(GOV_TYPE))
-# ggplot(data = pas_i) +
-#   ggtitle(paste("Governance Type (with KBA boundaries)")) +
-#   geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
-#   geom_sf(data = pas_i, size = 0.0002, aes(fill = GOV_TYPE)) +
-#   geom_sf(data = data_i, size = 0.002, fill = "transparent") +
-#   coord_sf(ylim = c(-22, -35)) +
-#   scale_fill_discrete(na.value = "grey") +
-#   labs(fill = "Gov Type") +
-#   theme_bw()
-# 
-# ggplot(data = pas_i) +
-#   ggtitle(paste("Governance Type (w/o KBA boundaries)")) +
-#   geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
-#   geom_sf(data = pas_i, size = 0.0002, aes(fill = GOV_TYPE)) +
-#   #geom_sf(data = data_i, size = 0.002, fill = "transparent") +
-#   coord_sf(ylim = c(-22, -35)) +
-#   scale_fill_discrete(na.value = "grey") +
-#   labs(fill = "Gov Type") +
-#   theme_bw()
-# 
-# dev.off()
-# #### Figure 2 - Spread of % change ----
-# pdf(paste0("./visuals/f2_boxplot_", td, ".pdf")) ## start pdf up here
-# 
-# ggplot(data = extreme_comp_data, 
-#        aes(x=measure, y = diff_first, color = measure)) +
-#   geom_boxplot() +
-#   labs(x = "Date", y = "% Change from Historical", title = "% Change in Index Historical to 2015-25") +
-#   facet_wrap(~category, scales = "free", nrow = 2) +
-#   theme_bw()
-# ggplot(data = extreme_comp_data, aes(x=measure, y = diff_second, color = measure)) +
-#   geom_boxplot() +
-#   labs(x = "Date", y = "% Change from Historical", title = "% Change in Index Historical to 2026-36") +
-#   facet_wrap(~category, scales = "free", nrow = 2) +
-#   theme_bw()
-# 
-# ggplot(data = extreme_comp_data, 
-#        aes(x=measure, y = diff_abs_first, color = measure)) +
-#   geom_boxplot() +
-#   labs(x = "Date", y = "Absolute Change from Historical", title = "Absolute Change in Index Historical to 2015-25") +
-#   facet_wrap(~category, scales = "free", nrow = 2) +
-#   theme_bw()
-# ggplot(data = extreme_comp_data, aes(x=measure, y = diff_abs_second, color = measure)) +
-#   geom_boxplot() +
-#   labs(x = "Date", y = "Absolute Change from Historical", title = "Absolute Change in Index Historical to 2026-36") +
-#   facet_wrap(~category, scales = "free", nrow = 2) +
-#   theme_bw()
-# 
-# 
-# dev.off()
-# #### Figure 3 high heat (wdsi + txx + 95th percentile warm days) ----
-# pdf(paste0("./visuals/f3_scatterplots_", td, ".pdf")) ## start pdf up here
-# 
-# data <- left_join(extreme_comp_data, 
-#                   kbas %>% select(SitRecID, percent_protected = cum_percPA, protected)) %>% 
-#   mutate(protected = fct_relevel(protected, c("FP", "P", "NP")),
-#          protected_group = cut(percent_protected, 7, labels = F ))
-# 
-# diff_first <- data %>% pivot_wider(id_cols = c(SitRecID, climate_threat, protected, percent_protected), 
-#                                   names_from = measure, 
-#                                   values_from = c("diff_first"))
-# diff_second <- data %>% pivot_wider(id_cols = c(SitRecID, climate_threat), 
-#                                                 names_from = measure, 
-#                                                 values_from = c("diff_second"))
-# 
-# ## plot heat
-# xlims <- range(diff_first$tx90pETCCDI, diff_second$tx90pETCCDI)
-# ylims <- range(diff_first$wsdiETCCDI, diff_second$wsdiETCCDI)
-# zlims <- range(diff_first$txxETCCDI, diff_second$txxETCCDI)
-# 
-# ggplot(data = diff_first, aes(x = tx90pETCCDI, y = wsdiETCCDI)) +
-#   ggtitle(paste("Average % Change '15-25 tx90p + wsdi")) +
-#   geom_point(aes(color = txxETCCDI)) +
-#   scale_colour_gradient(low = "#f6e8c3", high = "#01665e", limits = zlims) +
-#   geom_rug(col=rgb(.5,0,0,alpha=.2)) +
-#   xlim(xlims) + ylim(ylims) +
-#   xlab("% Change in tx90pETCCDI from `01-11") + 
-#   ylab("% Change in wsdiETCCDI \n from `01-11") +
-#   theme_bw() 
-# 
-# ggplot(data = diff_second, aes(x = tx90pETCCDI, y = wsdiETCCDI)) +
-#   ggtitle(paste("Average % Change'26-36 tx90p + wsdi")) +
-#   geom_point(aes(color = txxETCCDI)) +
-#   scale_colour_gradient(low = "#f6e8c3", high = "#01665e", limits = zlims) +
-#   geom_rug(col=rgb(.5,0,0,alpha=.2)) +
-#   xlim(xlims) + ylim(ylims) +
-#   xlab("% Change in tx90pETCCDI from `01-11") + 
-#   ylab("% Change in wsdiETCCDI \n from `01-11") +
-#   theme_bw()
-# 
-# ## make grid data
-# first_grid <-  diff_first %>% mutate(tx90pETCCDI = cut(tx90pETCCDI, quantile(tx90pETCCDI), labels = F),
-#                                      wsdiETCCDI = cut(wsdiETCCDI, quantile(wsdiETCCDI), labels = F),
-#                                      txxETCCDI = cut(txxETCCDI, quantile(txxETCCDI), labels = F))
-# second_grid <-  diff_second %>% mutate(tx90pETCCDI = cut(tx90pETCCDI, quantile(tx90pETCCDI), labels = F),
-#                                      wsdiETCCDI = cut(wsdiETCCDI, quantile(wsdiETCCDI), labels = F),
-#                                      txxETCCDI = cut(txxETCCDI, quantile(txxETCCDI), labels = F))
-# 
-# ggplot(diff_first, aes(x = tx90pETCCDI, y = wsdiETCCDI)) +
-#     stat_bin2d(aes(fill = after_stat(count)), bins = 4, na.rm = T) + 
-#   scale_fill_gradient(low = "#d8b365", high = "#01665e", na.value = "light grey") + 
-#   theme_bw()
-# 
-# ggplot(diff_second, aes(x = tx90pETCCDI, y = wsdiETCCDI)) +
-#   stat_bin2d(aes(fill = after_stat(count)), bins = 4, na.rm = T) + 
-#   scale_fill_gradient(low = "#d8b365", high = "#01665e", na.value = "light grey") + 
-#   theme_bw()
-# 
-# dev.off()
-# #### Figure 4plot wet /dry (cdd, cwd, txx) ----
-# pdf(paste0("./visuals/f4_scatterplots_", td, ".pdf")) ## start pdf up here
-# 
-# xlims <- range(diff_first$cddETCCDI, diff_second$cddETCCDI)
-# ylims <- range(diff_first$cwdETCCDI, diff_second$cwdETCCDI)
-# zlims <- range(diff_first$r95pETCCDI, diff_second$r95pETCCDI)
-# 
-# ggplot(data = diff_first, aes(x = cddETCCDI, y = cwdETCCDI)) +
-#   ggtitle(paste("Average % Change '15-25 cdd + cwd")) +
-#   geom_point(aes(color = r95pETCCDI)) + 
-#   geom_rug(col=rgb(.5,0,0,alpha=.2)) +
-#   xlim(xlims) + ylim(ylims) +
-#   scale_colour_gradient(low = "#f6e8c3", high = "#01665e", limits = zlims) +
-#   xlab("% Change in cddETCCDI from `01-11") + 
-#   ylab("% Change in cwdETCCDI \n from `01-11") +
-#   theme_bw() 
-# ggplot(data = diff_second, aes(x = cddETCCDI, y = cwdETCCDI)) +
-#   ggtitle(paste("Average % Change'26-36 cdd + cwd")) +
-#   geom_point(aes(color = r95pETCCDI)) +
-#   scale_colour_gradient(low = "#f6e8c3", high = "#01665e", limits = zlims) +
-#   geom_rug(col=rgb(.5,0,0,alpha=.2)) +
-#   xlim(xlims) + ylim(ylims) +
-#   xlab("% Change in cddETCCDI from `01-11") + 
-#   ylab("% Change in cwdETCCDI \n from `01-11") +
-#   theme_bw()
-# 
-# first_grid <-  diff_first %>% mutate(cddETCCDI = cut(cddETCCDI, quantile(cddETCCDI), labels = F),
-#                                      cwdETCCDI = cut(cwdETCCDI, quantile(cwdETCCDI), labels = F),
-#                                      r95pETCCDI = cut(r95pETCCDI, quantile(r95pETCCDI), labels = F))
-# second_grid <-  diff_second %>% mutate(cddETCCDI = cut(cddETCCDI, quantile(cddETCCDI), labels = F),
-#                                        cwdETCCDI = cut(cwdETCCDI, quantile(cwdETCCDI), labels = F),
-#                                        r95pETCCDI = cut(r95pETCCDI, quantile(r95pETCCDI), labels = F))
-# 
-# ggplot(diff_first, aes(x = cddETCCDI, y = cwdETCCDI)) +
-#   stat_bin2d(aes(fill = after_stat(count)), bins = 4, na.rm = T) + 
-#   scale_fill_gradient(low = "#d8b365", high = "#01665e", na.value = "light grey") + 
-#   theme_bw()
-# 
-# ggplot(diff_second, aes(x = cddETCCDI, y = cwdETCCDI)) +
-#   stat_bin2d(aes(fill = after_stat(count)), bins = 4, na.rm = T) + 
-#   scale_fill_gradient(low = "#d8b365", high = "#01665e", na.value = "light grey") + 
-#   theme_bw()
-# 
-# dev.off()
-# 
-# 
+#### Start Plots ----
+#### Figure 1 - Plot protection  ----
+pdf(paste0("./visuals/protection_", td, ".pdf")) ## start pdf up here
+
+data_i <- left_join(kbas,
+                    kba_geometry %>%
+                      filter(SitRecID %in% unique(kbas$SitRecID)) %>%
+                      select(SitRecID, geometry),
+                    by = "SitRecID") %>% st_set_geometry("geometry") %>%
+  filter(!is.na(cum_percPA)) %>% rename(percent_protected = cum_percPA)
+
+## current protection status by percent
+print(ggplot(data = data_i) +
+        ggtitle(paste("Current Protection Status")) +
+        geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
+        geom_sf(data = data_i, size = 0.0002, aes(fill = percent_protected)) +
+        coord_sf(ylim = c(-22, -35)) +
+        labs(fill = "Percent of KBA covered by Protected Areas") +
+        scale_fill_gradient(low = "#edf8fb", high = "#006d2c", na.value = "grey") +
+        theme_bw())
+
+## curernt protection status by group
+data_i <- data_i %>% mutate(protected = fct_relevel(protected, c("FP", "P", "NP")))
+print(ggplot(data = data_i) +
+        ggtitle(paste("Current Coverage Group")) +
+        geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
+        geom_sf(data = data_i, size = 0.0002, aes(fill = protected)) +
+        coord_sf(ylim = c(-22, -35)) +
+        labs(fill = "Protection Progress") +
+        scale_fill_manual(values = c("#4d9221", "#66c2a4", "#c51b7d")) +
+        theme_bw())
+
+## map of climate threats
+print(ggplot(data = data_i) +
+        ggtitle(paste("Climate Threat")) +
+        geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
+        geom_sf(data = data_i, size = 0.0002, aes(fill = climate_threat)) +
+        coord_sf(ylim = c(-22, -35)) +
+        labs(fill = "IUCN Climate Threatened") +
+        scale_fill_manual(values = c("#01665e", "#8c510a")) +
+        theme_bw())
+
+## bar of protections
+ggplot(data = data, aes(protected)) +
+  geom_bar(aes(fill = factor(protected, levels = c("FP", "P", "NP")))) +
+  labs(xlab = "protected", ylab = "Count of KBAs", fill = "KBA Coverage") +
+  scale_fill_manual(values = c("#4d9221", "#66c2a4", "#c51b7d")) +
+  theme_bw()
+
+## bar of protections and climate threats
+ggplot(data = data, aes(x = protected, alpha = climate_threat)) +
+  geom_bar(position = "dodge", aes(fill = factor(protected, levels = c("FP", "P", "NP")))) +
+  labs(xlab = "Protection Status", ylab = "Count of KBAs", fill = "KBA Coverage") +
+  scale_fill_manual(values = c("#4d9221", "#66c2a4", "#c51b7d")) +
+  theme_bw()
+
+
+## and who is in charge (governance type)
+pas_i <- left_join(governance, pas %>% select(WDPAID, geometry), by = "WDPAID") %>%
+  st_set_geometry("geometry") %>%
+  filter(!is.na(GOV_TYPE))
+ggplot(data = pas_i) +
+  ggtitle(paste("Governance Type (with KBA boundaries)")) +
+  geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
+  geom_sf(data = pas_i, size = 0.0002, aes(fill = GOV_TYPE)) +
+  geom_sf(data = data_i, size = 0.002, fill = "transparent") +
+  coord_sf(ylim = c(-22, -35)) +
+  scale_fill_discrete(na.value = "grey") +
+  labs(fill = "Gov Type") +
+  theme_bw()
+
+ggplot(data = pas_i) +
+  ggtitle(paste("Governance Type (w/o KBA boundaries)")) +
+  geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
+  geom_sf(data = pas_i, size = 0.0002, aes(fill = GOV_TYPE)) +
+  #geom_sf(data = data_i, size = 0.002, fill = "transparent") +
+  coord_sf(ylim = c(-22, -35)) +
+  scale_fill_discrete(na.value = "grey") +
+  labs(fill = "Gov Type") +
+  theme_bw()
+
+dev.off()
+#### Figure 2 - Spread of % change ----
+pdf(paste0("./visuals/f2_boxplot_", td, ".pdf")) ## start pdf up here
+
+ggplot(data = extreme_comp_data,
+       aes(x=measure, y = diff_first, color = measure)) +
+  geom_boxplot() +
+  labs(x = "Date", y = "% Change from Historical", title = "% Change in Index Historical to 2015-25") +
+  facet_wrap(~category, scales = "free", nrow = 2) +
+  theme_bw()
+ggplot(data = extreme_comp_data, aes(x=measure, y = diff_second, color = measure)) +
+  geom_boxplot() +
+  labs(x = "Date", y = "% Change from Historical", title = "% Change in Index Historical to 2026-36") +
+  facet_wrap(~category, scales = "free", nrow = 2) +
+  theme_bw()
+
+ggplot(data = extreme_comp_data,
+       aes(x=measure, y = diff_abs_first, color = measure)) +
+  geom_boxplot() +
+  labs(x = "Date", y = "Absolute Change from Historical", title = "Absolute Change in Index Historical to 2015-25") +
+  facet_wrap(~category, scales = "free", nrow = 2) +
+  theme_bw()
+ggplot(data = extreme_comp_data, aes(x=measure, y = diff_abs_second, color = measure)) +
+  geom_boxplot() +
+  labs(x = "Date", y = "Absolute Change from Historical", title = "Absolute Change in Index Historical to 2026-36") +
+  facet_wrap(~category, scales = "free", nrow = 2) +
+  theme_bw()
+
+
+dev.off()
+#### Figure 3 high heat (wdsi + txx + climate threat) ----
+pdf(paste0("./visuals/f3_scatterplots_", td, ".pdf")) ## start pdf up here
+
+data <- left_join(extreme_comp_data,
+                  kbas %>% select(SitRecID, percent_protected = cum_percPA, protected)) %>%
+  mutate(protected = fct_relevel(protected, c("FP", "P", "NP")),
+         protected_group = cut(percent_protected, 7, labels = F ))
+
+diff_first <- data %>% pivot_wider(id_cols = c(SitRecID, climate_threat, protected, percent_protected),
+                                  names_from = measure,
+                                  values_from = c("diff_first"))
+diff_second <- data %>% pivot_wider(id_cols = c(SitRecID, climate_threat),
+                                                names_from = measure,
+                                                values_from = c("diff_second"))
+
+## plot heat
+xlims <- range(diff_first$txxETCCDI, diff_second$txxETCCDI)
+ylims <- range(diff_first$wsdiETCCDI, diff_second$wsdiETCCDI)
+
+ggplot(data = diff_first, aes(x = txxETCCDI, y = wsdiETCCDI)) +
+  ggtitle(paste("Average % Change '15-25 tx90p + wsdi")) +
+  geom_point(aes(color = climate_threat)) +
+  scale_colour_gradient(low = "#f6e8c3", high = "#01665e") +
+  geom_rug(col=rgb(.5,0,0,alpha=.2)) +
+  xlim(xlims) + ylim(ylims) +
+  xlab("% Change in txxETCCDI from `95-14") +
+  ylab("% Change in wsdiETCCDI \n from `95-14") +
+  theme_bw()
+
+ggplot(data = diff_second, aes(x = txxETCCDI, y = wsdiETCCDI)) +
+  ggtitle(paste("Average % Change'26-36 tx90p + wsdi")) +
+  geom_point(aes(color = climate_threat)) +
+  scale_colour_gradient(low = "#f6e8c3", high = "#01665e") +
+  geom_rug(col=rgb(.5,0,0,alpha=.2)) +
+  xlim(xlims) + ylim(ylims) +
+  xlab("% Change in tx90pETCCDI from `95-14") +
+  ylab("% Change in wsdiETCCDI \n from `95-14") +
+  theme_bw()
+
+## make grid data
+
+ggplot(diff_first, aes(x = txxETCCDI, y = wsdiETCCDI)) +
+    stat_bin2d(aes(fill = after_stat(count), alpha = after_stat(count)), bins = 4, na.rm = T) +
+  scale_fill_gradient(high = "#01665e") +
+  theme_bw()
+
+ggplot(diff_second, aes(x = txxETCCDI, y = wsdiETCCDI)) +
+  stat_bin2d(aes(fill = after_stat(count), alpha = after_stat(count)), bins = 4, na.rm = T) +
+  scale_fill_gradient(high = "#01665e") +
+  theme_bw()
+
+dev.off()
+#### Figure 4plot wet /dry (cdd, cwd, txx) ----
+pdf(paste0("./visuals/f4_scatterplots_", td, ".pdf")) ## start pdf up here
+
+xlims <- range(diff_first$cddETCCDI, diff_second$cddETCCDI)
+ylims <- range(diff_first$r95pETCCDI, diff_second$r95pETCCDI)
+
+ggplot(data = diff_first, aes(x = cddETCCDI, y = r95pETCCDI)) +
+  ggtitle(paste("Average % Change '15-25 cdd + cwd")) +
+  geom_point(aes(color = climate_threat)) +
+  geom_rug(col=rgb(.5,0,0,alpha=.2)) +
+  xlim(xlims) + ylim(ylims) +
+  scale_colour_gradient(low = "#f6e8c3", high = "#01665e") +
+  xlab("% Change in cddETCCDI from `95-14") +
+  ylab("% Change in r95pETCCDI \n from `95-14") +
+  theme_bw()
+ggplot(data = diff_second, aes(x = cddETCCDI, y = r95pETCCDI)) +
+  ggtitle(paste("Average % Change'26-36 cdd + cwd")) +
+  geom_point(aes(color = climate_threat)) +
+  scale_colour_gradient(low = "#f6e8c3", high = "#01665e") +
+  geom_rug(col=rgb(.5,0,0,alpha=.2)) +
+  xlim(xlims) + ylim(ylims) +
+  xlab("% Change in cddETCCDI from `95-14") +
+  ylab("% Change in r95pETCCDI \n from `95-14") +
+  theme_bw()
+
+first_grid <-  diff_first %>% mutate(cddETCCDI = cut(cddETCCDI, quantile(cddETCCDI), labels = F),
+                                     r95pETCCDI = cut(r95pETCCDI, quantile(r95pETCCDI), labels = F))
+second_grid <-  diff_second %>% mutate(cddETCCDI = cut(cddETCCDI, quantile(cddETCCDI), labels = F),
+                                       r95pETCCDI = cut(r95pETCCDI, quantile(r95pETCCDI), labels = F))
+
+ggplot(diff_first, aes(x = cddETCCDI, y = cwdETCCDI)) +
+  stat_bin2d(aes(fill = after_stat(count), alpha = after_stat(count)), bins = 4, na.rm = T) +
+  scale_fill_gradient(high = "#01665e") +
+  theme_bw()
+
+ggplot(diff_second, aes(x = cddETCCDI, y = cwdETCCDI)) +
+  stat_bin2d(aes(fill = after_stat(count), alpha = after_stat(count)), bins = 4, na.rm = T) +
+  scale_fill_gradient(high = "#01665e") +
+  theme_bw()
+
+dev.off()
+
+
 # #### Plot maps  ----
 # pdf(paste0("./visuals/maps_", td, ".pdf")) ## start pdf up here
 # 
