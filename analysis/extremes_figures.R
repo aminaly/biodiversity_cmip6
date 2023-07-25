@@ -18,6 +18,7 @@ library(interactions)
 library(quantreg)
 library(jtools)
 library(sf)
+library(ggpattern)
 #library(ggridges)
 #library(gridExtra)
 #library(report)
@@ -36,8 +37,8 @@ ids <- c(7076, 7086, 7090, 7092, 7095, 7097, 7100, 7101, 7102, 7103, 7107,
          7166, 7168, 7170, 7171, 7172, 7174, 7175, 32050, 32058, 44661, 44671)
 
 #### Get data ----
-#world <- st_read(dsn = "./raw_data/WB_countries_Admin0_10m/WB_countries_Admin0_10m.shp", stringsAsFactors = F, crs = 4326) 
-#world <- world %>% filter(ISO_A3 == COUNTRY)
+world <- st_read(dsn = "./raw_data/WB_countries_Admin0_10m/WB_countries_Admin0_10m.shp", stringsAsFactors = F, crs = 4326) 
+world <- world %>% filter(ISO_A3 == COUNTRY)
 kba_class <- read_csv("./raw_data/KBA2022/kba_class_2022_clean.csv")[,-1]
 kba_protected_area <- read.csv("./processed_data/pa_kba_ovl/all_countries_2022.csv")
 kba_geometry <- st_read(dsn = "./processed_data/kba/KBAsGlobal_2022_September_02_POL_noOverlaps.shp", stringsAsFactors = F, crs = 4326) 
@@ -116,22 +117,22 @@ extreme_comp_data <- left_join(extreme_comp_data, categories, by = "measure")
 
 
 ## create dataset of goverance types
-# intersections <- st_intersects(kba_geometry, pas)
-# governance <- c()
-# for(i in 1:nrow(intersections)) {
-#   indeces <- pas %>% slice(intersections[[i]])
-#   ifelse(nrow(indeces) == 0, WDPA <- NA, WDPA <- indeces %>% pull(WDPAID))
-#   governance <- rbind(governance,
-#                     cbind(SitRecID = kba_geometry[i,] %>% st_drop_geometry() %>% pull(SitRecID), 
-#                           WDPAID = WDPA))
-# }
-# governance <- as.data.frame(governance)
-# 
-# governance <- left_join(kbas, governance, by = "SitRecID")
-# governance <- left_join(governance, ndvi %>%
-#                           filter(year == 2022, ISO3 == COUNTRY, !is.na(kba)) %>% 
-#                           select(WDPAID, GOV_TYPE, DESIG_TYPE), 
-#                         by = c("WDPAID"))
+intersections <- st_intersects(kba_geometry, pas)
+governance <- c()
+for(i in 1:nrow(intersections)) {
+  indeces <- pas %>% slice(intersections[[i]])
+  ifelse(nrow(indeces) == 0, WDPA <- NA, WDPA <- indeces %>% pull(WDPAID))
+  governance <- rbind(governance,
+                    cbind(SitRecID = kba_geometry[i,] %>% st_drop_geometry() %>% pull(SitRecID),
+                          WDPAID = WDPA))
+}
+governance <- as.data.frame(governance)
+
+governance <- left_join(kbas, governance, by = "SitRecID")
+governance <- left_join(governance, ndvi %>%
+                          filter(year == 2022, ISO3 == COUNTRY, !is.na(kba)) %>%
+                          select(WDPAID, GOV_TYPE, DESIG_TYPE),
+                        by = c("WDPAID"))
 
 
 #### Model Agreement ----
@@ -190,9 +191,16 @@ if(file.exists("./processed_data/model_agreement.csv")) {
           summarize(mean_index = mean(mean, na.rm = T)) %>% pull(mean_index)
         c <- sample_n(comp_m, nrow(comp_m), replace = T) %>%
           summarize(mean_index = mean(mean, na.rm = T)) %>% pull(mean_index)
-        
-        boots <- rbind(boots, cbind(firstdecade = (c1 - h)/h,
-                                    seconddecade = (c2 - h)/h, future = (c - h)/h))
+       
+        if(measure == "txxETCCDI") {
+          boots <- rbind(boots, cbind(firstdecade = (c1 - h),
+                                      seconddecade = (c2 - h), 
+                                      future = (c - h)))
+        } else{
+          boots <- rbind(boots, cbind(firstdecade = (c1 - h)/h,
+                                      seconddecade = (c2 - h)/h, 
+                                      future = (c - h)/h))          
+        } 
       }
       
       ## using the 1000 boots of all 4, return summary row for this site and add to model agreement
@@ -207,7 +215,7 @@ if(file.exists("./processed_data/model_agreement.csv")) {
       over100 <- apply(boots, 2, function(x) {sum(abs(x) > 1)/ reps})
   
       model_agreement <- rbind(model_agreement,
-                               cbind(SitRecID = site, measure = m, low, high,
+                               cbind(SitRecID = site, measure = measure, low, high,
                                      over0, under0, over100))
       
     }
@@ -301,11 +309,76 @@ ggplot(data = pas_i) +
 dev.off()
 #### Figure 2 - Plot model agreement ---- 
 pdf(paste0("./visuals/model_agreement_", td, ".pdf")) ## start pdf up here
-#### Loop through and plot2 decades of % change ----
+
+e <- extreme_comp_data %>% select(SitRecID, measure, 
+                                  firstdecade = diff_first, 
+                                  seconddecade = diff_second) %>% 
+  pivot_longer(cols = c(firstdecade, seconddecade), names_to = "X")
+
+model_agreement <- left_join(model_agreement, e, by = c("X", "SitRecID", "measure")) %>% 
+  mutate(confidence = ifelse(over0 > .9 | under0 > .9, "virtually certain", 
+                             ifelse(over0 > .6 | under0 > .6, "very likely",
+                                    NA)))
+## plot map of all KBAs
+data_i <- left_join(model_agreement,
+                    kba_geometry %>%
+                      filter(SitRecID %in% unique(data$SitRecID)) %>%
+                      select(SitRecID, geometry),
+                    by = "SitRecID") %>% st_set_geometry("geometry") %>%
+  mutate(climate_threat_fill = ifelse(climate_threat, TRUE, NA)) %>%
+  mutate(future_fill = ifelse(diff_first >= .5, "first",
+                              ifelse(diff_second >= .5, "second", "none"))) %>%
+  mutate(future_fill = fct_relevel(future_fill, c("none", "second", "first")))
+
+for(i in indexes) {
+  
+  ggplot(data = data_i %>% measure == i) +
+    ggtitle(paste("Model Agreement", i)) +
+    geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
+    geom_sf(data = data_i, size = 0.0002, aes(fill = values, color = confidence)) +
+    geom_polygon_pattern(aes(pattern_type = confidence), pattern = 'magick',
+                         pattern_fill = 'black') + 
+    coord_sf(ylim = c(-22, -35), xlim = c(15, 35)) +
+    labs(fill = "Average Change") +
+    scale_fill_continuous(low = "#67a9cf", high = "#ef8a62",
+                      na.value = "grey") +
+    theme_bw()
+  
+  ## bar of protections
+  ggplot(data = model_agreement, aes(confidence)) +
+    geom_bar(aes(fill = factor(confidence, levels = c("virtually certain", "very likely")))) +
+    labs(xlab = "Model Agreement", ylab = "Count of KBAs", fill = "Confidence") +
+    scale_fill_manual(values = c("#4d9221", "#66c2a4", "#c51b7d")) +
+    theme_bw()
+  
+  ## first decade plot range of each measure (average across all KBAs)
+  ggplot(data = model_agreement %>% filter(X = "firstdecade"),
+         aes(x = measure, y = mid, ymin = low, ymax = high)) +
+    geom_point(position = position_dodge2(1)) +
+    geom_errorbar(width = 1, position = position_dodge2(1)) +
+    geom_hline(yintercept=coef_quants[5,2],  linetype="dashed",
+               color = "red", size=.5) +
+    geom_vline(xintercept = 4.5, color = "red") +
+    labs(x = "Race", y = "Change in 3√MI per degree increase C",
+         title = paste0("Fixed Effects Slope for Income groups \n",
+                        "r2:", round(summary(m)$r2adj, 3),
+                        "proj r2:", round(summary(m)$P.r.squared,3))) +
+    theme_bw()
+  
+  ## second decade 
+  
+}
+
+## Pl
+#### Loop through and plot 2 decades of % change ----
 for(index in indexes) {
   
   # select correct measure
-  data <- plot_data %>% filter(measure == paste0(index, "ETCCDI"))
+  data <- extreme_comp_data %>% filter(measure == paste0(index, "ETCCDI"))
+  model_agreement %>% pivot_wider(id_cols = c(SitRecID, measure), 
+                                  names_from = X,
+                                  values_from = c(low, high, over0, under0, over100))
+  data <- left_join(data, model_agreement, by = c("SitRecID", "measure"))
   data_i <- left_join(data,
                       kba_geometry %>% filter(SitRecID %in% unique(data$SitRecID)),
                       by = "SitRecID") %>% st_set_geometry("geometry")
@@ -395,7 +468,7 @@ ylims <- range(diff_first$wsdiETCCDI, diff_second$wsdiETCCDI)
 ggplot(data = diff_first, aes(x = txxETCCDI, y = wsdiETCCDI)) +
   ggtitle(paste("Average % Change '15-25 tx90p + wsdi")) +
   geom_point(aes(color = climate_threat)) +
-  scale_colour_gradient(low = "#f6e8c3", high = "#01665e") +
+  scale_colour_manual(values=c("#f6e8c3", "#01665e")) +
   geom_rug(col=rgb(.5,0,0,alpha=.2)) +
   xlim(xlims) + ylim(ylims) +
   xlab("% Change in txxETCCDI from `95-14") +
@@ -405,7 +478,7 @@ ggplot(data = diff_first, aes(x = txxETCCDI, y = wsdiETCCDI)) +
 ggplot(data = diff_second, aes(x = txxETCCDI, y = wsdiETCCDI)) +
   ggtitle(paste("Average % Change'26-36 tx90p + wsdi")) +
   geom_point(aes(color = climate_threat)) +
-  scale_colour_gradient(low = "#f6e8c3", high = "#01665e") +
+  scale_colour_manual(values=c("#f6e8c3", "#01665e")) +
   geom_rug(col=rgb(.5,0,0,alpha=.2)) +
   xlim(xlims) + ylim(ylims) +
   xlab("% Change in tx90pETCCDI from `95-14") +
@@ -436,14 +509,14 @@ ggplot(data = diff_first, aes(x = cddETCCDI, y = r95pETCCDI)) +
   geom_point(aes(color = climate_threat)) +
   geom_rug(col=rgb(.5,0,0,alpha=.2)) +
   xlim(xlims) + ylim(ylims) +
-  scale_colour_gradient(low = "#f6e8c3", high = "#01665e") +
+  scale_colour_manual(values=c("#f6e8c3", "#01665e")) +
   xlab("% Change in cddETCCDI from `95-14") +
   ylab("% Change in r95pETCCDI \n from `95-14") +
   theme_bw()
 ggplot(data = diff_second, aes(x = cddETCCDI, y = r95pETCCDI)) +
   ggtitle(paste("Average % Change'26-36 cdd + cwd")) +
   geom_point(aes(color = climate_threat)) +
-  scale_colour_gradient(low = "#f6e8c3", high = "#01665e") +
+  scale_colour_manual(values=c("#f6e8c3", "#01665e")) +
   geom_rug(col=rgb(.5,0,0,alpha=.2)) +
   xlim(xlims) + ylim(ylims) +
   xlab("% Change in cddETCCDI from `95-14") +
