@@ -111,28 +111,28 @@ extreme_comp_data <- left_join(hist %>% ungroup %>% dplyr::select(-scenario),
                               ((mean_index_second - mean_index)/mean_index)*100))
 
 categories <- as.data.frame(cbind(measure = unique(extreme_comp_data$measure),
-                                  category = c("precip", "precip", "precip", "precip", "temp", "temp", "temp", "temp")))
+                                  category = c("precip", "precip", "temp", "temp")))
 
 extreme_comp_data <- left_join(extreme_comp_data, categories, by = "measure")
 
 
 ## create dataset of goverance types
-intersections <- st_intersects(kba_geometry, pas)
-governance <- c()
-for(i in 1:nrow(intersections)) {
-  indeces <- pas %>% slice(intersections[[i]])
-  ifelse(nrow(indeces) == 0, WDPA <- NA, WDPA <- indeces %>% pull(WDPAID))
-  governance <- rbind(governance,
-                    cbind(SitRecID = kba_geometry[i,] %>% st_drop_geometry() %>% pull(SitRecID),
-                          WDPAID = WDPA))
-}
-governance <- as.data.frame(governance)
-
-governance <- left_join(kbas, governance, by = "SitRecID")
-governance <- left_join(governance, ndvi %>%
-                          filter(year == 2022, ISO3 == COUNTRY, !is.na(kba)) %>%
-                          select(WDPAID, GOV_TYPE, DESIG_TYPE),
-                        by = c("WDPAID"))
+# intersections <- st_intersects(kba_geometry, pas)
+# governance <- c()
+# for(i in 1:nrow(intersections)) {
+#   indeces <- pas %>% slice(intersections[[i]])
+#   ifelse(nrow(indeces) == 0, WDPA <- NA, WDPA <- indeces %>% pull(WDPAID))
+#   governance <- rbind(governance,
+#                     cbind(SitRecID = kba_geometry[i,] %>% st_drop_geometry() %>% pull(SitRecID),
+#                           WDPAID = WDPA))
+# }
+# governance <- as.data.frame(governance)
+# 
+# governance <- left_join(kbas, governance, by = "SitRecID")
+# governance <- left_join(governance, ndvi %>%
+#                           filter(year == 2022, ISO3 == COUNTRY, !is.na(kba)) %>%
+#                           select(WDPAID, GOV_TYPE, DESIG_TYPE),
+#                         by = c("WDPAID"))
 
 
 #### Model Agreement ----
@@ -225,523 +225,529 @@ if(file.exists("./processed_data/model_agreement.csv")) {
 write.csv(model_agreement, "./processed_data/model_agreement.csv")
 }
 
-# #### Start Plots ----
-# #### Figure 1 - Plot protection  ----
-# pdf(paste0("./visuals/protection_", td, ".pdf")) ## start pdf up here
+#### Start Plots ----
+#### Figure 1 - Plot protection  ----
+pdf(paste0("./visuals/protection_", td, ".pdf")) ## start pdf up here
+
+data_i <- left_join(kbas,
+                    kba_geometry %>%
+                      filter(SitRecID %in% unique(kbas$SitRecID)) %>%
+                      select(SitRecID, geometry),
+                    by = "SitRecID") %>% st_set_geometry("geometry") %>%
+  filter(!is.na(cum_percPA)) %>% rename(percent_protected = cum_percPA)
+
+## current protection status by percent
+print(ggplot(data = data_i) +
+        ggtitle(paste("Current Protection Status")) +
+        geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
+        geom_sf(data = data_i, size = 0.0002, aes(fill = percent_protected)) +
+        coord_sf(ylim = c(-22, -35)) +
+        labs(fill = "Percent of KBA covered by Protected Areas") +
+        scale_fill_gradient(low = "#edf8fb", high = "#006d2c", na.value = "grey") +
+        theme_bw())
+
+## curernt protection status by group
+data_i <- data_i %>% mutate(protected = fct_relevel(protected, c("FP", "P", "NP")))
+print(ggplot(data = data_i) +
+        ggtitle(paste("Current Coverage Group")) +
+        geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
+        geom_sf(data = data_i, size = 0.0002, aes(fill = protected)) +
+        coord_sf(ylim = c(-22, -35)) +
+        labs(fill = "Protection Progress") +
+        scale_fill_manual(values = c("#4d9221", "#66c2a4", "#c51b7d")) +
+        theme_bw())
+
+## map of climate threats
+print(ggplot(data = data_i) +
+        ggtitle(paste("Climate Threat")) +
+        geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
+        geom_sf(data = data_i, size = 0.0002, aes(fill = climate_threat)) +
+        coord_sf(ylim = c(-22, -35)) +
+        labs(fill = "IUCN Climate Threatened") +
+        scale_fill_manual(values = c("#01665e", "#8c510a")) +
+        theme_bw())
+
+## bar of protections
+ggplot(data = data, aes(protected)) +
+  geom_bar(aes(fill = factor(protected, levels = c("FP", "P", "NP")))) +
+  labs(xlab = "protected", ylab = "Count of KBAs", fill = "KBA Coverage") +
+  scale_fill_manual(values = c("#4d9221", "#66c2a4", "#c51b7d")) +
+  theme_bw()
+
+## bar of protections and climate threats
+ggplot(data = data, aes(x = protected, alpha = climate_threat)) +
+  geom_bar(position = "dodge", aes(fill = factor(protected, levels = c("FP", "P", "NP")))) +
+  labs(xlab = "Protection Status", ylab = "Count of KBAs", fill = "KBA Coverage") +
+  scale_fill_manual(values = c("#4d9221", "#66c2a4", "#c51b7d")) +
+  theme_bw()
+
+
+## and who is in charge (governance type)
+pas_i <- left_join(governance, pas %>% select(WDPAID, geometry), by = "WDPAID") %>%
+  st_set_geometry("geometry") %>%
+  filter(!is.na(GOV_TYPE))
+ggplot(data = pas_i) +
+  ggtitle(paste("Governance Type (with KBA boundaries)")) +
+  geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
+  geom_sf(data = pas_i, size = 0.0002, aes(fill = GOV_TYPE)) +
+  geom_sf(data = data_i, size = 0.002, fill = "transparent") +
+  coord_sf(ylim = c(-22, -35)) +
+  scale_fill_discrete(na.value = "grey") +
+  labs(fill = "Gov Type") +
+  theme_bw()
+
+ggplot(data = pas_i) +
+  ggtitle(paste("Governance Type (w/o KBA boundaries)")) +
+  geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
+  geom_sf(data = pas_i, size = 0.0002, aes(fill = GOV_TYPE)) +
+  #geom_sf(data = data_i, size = 0.002, fill = "transparent") +
+  coord_sf(ylim = c(-22, -35)) +
+  scale_fill_discrete(na.value = "grey") +
+  labs(fill = "Gov Type") +
+  theme_bw()
+
+dev.off()
+#### Figure 2 - Plot 4 climate vars and model agreement ---- 
+pdf(paste0("./visuals/model_agreement_", td, ".pdf")) ## start pdf up here
+
+e <- extreme_comp_data %>% select(SitRecID, measure, 
+                                  firstdecade = diff_first, 
+                                  seconddecade = diff_second, 
+                                  climate_threat) %>% 
+  pivot_longer(cols = c(firstdecade, seconddecade), names_to = "X")
+
+model_agreement <- left_join(model_agreement, e, by = c("X", "SitRecID", "measure")) %>% 
+  filter(X != "future") %>%
+  mutate(confidence = ifelse(over0 >= .99 | under0 >= .99, "virtually certain",
+                             ifelse(over0 >= .9 | under0 >= .9, "very likely",
+                                    ifelse(over0 >= .66 | under0 >= .66, " likely",
+                                           ifelse(over0 >= .33 | under0 >= .33, "neither",
+                                                  "unlikely"))))) 
+## plot map of all KBAs
+data_i <- left_join(model_agreement,
+                    kba_geometry %>%
+                      filter(SitRecID %in% unique(data$SitRecID)) %>%
+                      select(SitRecID, geometry),
+                    by = "SitRecID") %>% st_set_geometry("geometry") 
+
+for(i in indexes) {
+  
+  ggplot(data = data_i[56:60,] %>% filter(measure == i)) +
+    geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
+    geom_sf(data = data_i, color = NA, aes(fill = value)) +
+    scale_fill_continuous(high = "#ef8a62",
+                          na.value = "grey") +
+    ggtitle(paste("Model Agreement", i)) +
+    coord_sf(ylim = c(-22, -35), xlim = c(15, 35)) +
+    labs(fill = "Average Change") +
+    theme_bw()
+  
+  ggplot(data = data_i[56:60,] %>% filter(measure == i)) +
+    geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
+    geom_sf(data = data_i, color = NA, aes(fill = confidence)) + #67a9cf
+    ggtitle(paste("Model Agreement", i)) +
+    coord_sf(ylim = c(-22, -35), xlim = c(15, 35)) +
+    labs(fill = "Average Change") +
+    theme_bw()
+  
+   ## bar of protections
+  ggplot(data = model_agreement, aes(confidence)) +
+    geom_bar(aes(fill = factor(confidence, levels = c("virtually certain", "very likely")))) +
+    labs(xlab = "Model Agreement", ylab = "Count of KBAs", fill = "Confidence") +
+    scale_fill_manual(values = c("#4d9221", "#66c2a4", "#c51b7d")) +
+    theme_bw()
+  
+  ## first decade plot range of each measure (average across all KBAs)
+  ggplot(data = model_agreement %>% filter(X = "firstdecade"),
+         aes(x = measure, y = mid, ymin = low, ymax = high)) +
+    geom_point(position = position_dodge2(1)) +
+    geom_errorbar(width = 1, position = position_dodge2(1)) +
+    geom_hline(yintercept=coef_quants[5,2],  linetype="dashed",
+               color = "red", size=.5) +
+    geom_vline(xintercept = 4.5, color = "red") +
+    labs(x = "Race", y = "Change in 3√MI per degree increase C",
+         title = paste0("Fixed Effects Slope for Income groups \n",
+                        "r2:", round(summary(m)$r2adj, 3),
+                        "proj r2:", round(summary(m)$P.r.squared,3))) +
+    theme_bw()
+  
+  ## second decade 
+  
+}
+
+## Pl
+#### Loop through and plot 2 decades of % change ----
+for(index in indexes) {
+  
+  # select correct measure
+  data <- extreme_comp_data %>% filter(measure == paste0(index, "ETCCDI"))
+  model_agreement %>% pivot_wider(id_cols = c(SitRecID, measure), 
+                                  names_from = X,
+                                  values_from = c(low, high, over0, under0, over100))
+  data <- left_join(data, model_agreement, by = c("SitRecID", "measure"))
+  data_i <- left_join(data,
+                      kba_geometry %>% filter(SitRecID %in% unique(data$SitRecID)),
+                      by = "SitRecID") %>% st_set_geometry("geometry")
+  
+  
+  print(ggplot(data = data_i) +
+          ggtitle(paste("Average 2015-2025", index)) +
+          geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
+          geom_sf(data = data_i, size = 0.0002, aes(fill = mean_index_first)) +
+          coord_sf(ylim = c(-22, -35)) +
+          labs(fill = "Change in Index") +
+          scale_fill_gradient(low = "#998ec3", high = "#f1a340", na.value = "grey") +
+          facet_wrap(~ scenario.y, nrow = 3) +
+          theme_bw())
+  
+  print(ggplot(data = data_i) +
+          ggtitle(paste("Average 2026-2036", index)) +
+          geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
+          geom_sf(data = data_i, size = 0.0002, aes(fill = mean_index_second)) +
+          coord_sf(ylim = c(-22, -35)) +
+          labs(fill = "Change in Index") +
+          scale_fill_gradient(low = "#998ec3", high = "#f1a340", na.value = "grey") +
+          facet_wrap(~ scenario.y, nrow = 3) +
+          theme_bw())
+  
+  print(ggplot(data = data_i) +
+          ggtitle(paste("Diff Historical + 2015-2025", index)) +
+          geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
+          geom_sf(data = data_i, size = 0.0002, aes(fill = diff_first)) +
+          coord_sf(ylim = c(-22, -35)) +
+          labs(fill = "Change in Index") +
+          scale_fill_gradient(low = "#998ec3", high = "#f1a340", na.value = "grey") +
+          facet_wrap(~ scenario.y, nrow = 3) +
+          theme_bw())
+  
+  print(ggplot(data = data_i) +
+          ggtitle(paste("Diff Historical + 2026-2036", index)) +
+          geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
+          geom_sf(data = data_i, size = 0.0002, aes(fill = diff_second)) +
+          coord_sf(ylim = c(-22, -35)) +
+          labs(fill = "Change in Index") +
+          scale_fill_gradient(low = "#998ec3", high = "#f1a340", na.value = "grey") +
+          facet_wrap(~ scenario.y, nrow = 3) +
+          theme_bw())
+  
+  reg <- lm(mean_index_first ~ mean_index, data = data)
+  print(ggplot(data = data, aes(x = mean_index, y = mean_index_first)) +
+          ggtitle(paste("Change historical to '15-25 + climate threat ", index)) +
+          geom_point(aes(color = climate_threat)) +
+          geom_abline(slope=reg$coefficients[2], intercept = reg$coefficients[1]) +
+          facet_wrap(~ scenario.y, nrow = 3) +
+          xlab("Average Index Hist") + ylab("Average Index 2015-2025") +
+          theme_bw())
+  
+  
+  reg <- lm(mean_index_second ~ mean_index, data = data)
+  print(ggplot(data = data, aes(x = mean_index, y = mean_index_second)) +
+          ggtitle(paste("Change historical to '26-36 + climate threat ", index)) +
+          geom_point(aes(color = climate_threat)) +
+          geom_abline(slope=reg$coefficients[2], intercept = reg$coefficients[1]) +
+          facet_wrap(~ scenario.y, nrow = 3) +
+          xlab("Average Index Hist") + ylab("Average Index 2026-2036") +
+          theme_bw())
+  
+}
+
+dev.off()
+#### Figure 3 high heat (wdsi + txx + climate threat) ----
+pdf(paste0("./visuals/f3_scatterplots_", td, ".pdf")) ## start pdf up here
+
+data <- left_join(extreme_comp_data,
+                  kbas %>% select(SitRecID, percent_protected = cum_percPA, protected)) %>%
+  mutate(protected = fct_relevel(protected, c("FP", "P", "NP")),
+         protected_group = cut(percent_protected, 7, labels = F ))
+
+diff_first <- data %>% pivot_wider(id_cols = c(SitRecID, climate_threat, protected, percent_protected),
+                                  names_from = measure,
+                                  values_from = c("diff_first"))
+diff_second <- data %>% pivot_wider(id_cols = c(SitRecID, climate_threat),
+                                                names_from = measure,
+                                                values_from = c("diff_second"))
+
+## plot heat
+xlims <- range(diff_first$txxETCCDI, diff_second$txxETCCDI)
+ylims <- range(diff_first$wsdiETCCDI, diff_second$wsdiETCCDI)
+
+ggplot(data = diff_first, aes(x = txxETCCDI, y = wsdiETCCDI)) +
+  ggtitle(paste("Average % Change '15-25 tx90p + wsdi")) +
+  geom_point(aes(color = climate_threat)) +
+  scale_colour_manual(values=c("#f6e8c3", "#01665e")) +
+  geom_rug(col=rgb(.5,0,0,alpha=.2)) +
+  xlim(xlims) + ylim(ylims) +
+  xlab("% Change in txxETCCDI from `95-14") +
+  ylab("% Change in wsdiETCCDI \n from `95-14") +
+  theme_bw()
+
+ggplot(data = diff_second, aes(x = txxETCCDI, y = wsdiETCCDI)) +
+  ggtitle(paste("Average % Change'26-36 tx90p + wsdi")) +
+  geom_point(aes(color = climate_threat)) +
+  scale_colour_manual(values=c("#f6e8c3", "#01665e")) +
+  geom_rug(col=rgb(.5,0,0,alpha=.2)) +
+  xlim(xlims) + ylim(ylims) +
+  xlab("% Change in tx90pETCCDI from `95-14") +
+  ylab("% Change in wsdiETCCDI \n from `95-14") +
+  theme_bw()
+
+## make grid data
+
+ggplot(diff_first, aes(x = txxETCCDI, y = wsdiETCCDI)) +
+    stat_bin2d(aes(fill = after_stat(count), alpha = after_stat(count)), bins = 4, na.rm = T) +
+  scale_fill_gradient(high = "#01665e") +
+  theme_bw()
+
+ggplot(diff_second, aes(x = txxETCCDI, y = wsdiETCCDI)) +
+  stat_bin2d(aes(fill = after_stat(count), alpha = after_stat(count)), bins = 4, na.rm = T) +
+  scale_fill_gradient(high = "#01665e") +
+  theme_bw()
+
+dev.off()
+#### Figure 4plot wet /dry (cdd, cwd, txx) ----
+pdf(paste0("./visuals/f4_scatterplots_", td, ".pdf")) ## start pdf up here
+
+xlims <- range(diff_first$cddETCCDI, diff_second$cddETCCDI)
+ylims <- range(diff_first$r95pETCCDI, diff_second$r95pETCCDI)
+
+ggplot(data = diff_first, aes(x = cddETCCDI, y = r95pETCCDI)) +
+  ggtitle(paste("Average % Change '15-25 cdd + cwd")) +
+  geom_point(aes(color = climate_threat)) +
+  geom_rug(col=rgb(.5,0,0,alpha=.2)) +
+  xlim(xlims) + ylim(ylims) +
+  scale_colour_manual(values=c("#f6e8c3", "#01665e")) +
+  xlab("% Change in cddETCCDI from `95-14") +
+  ylab("% Change in r95pETCCDI \n from `95-14") +
+  theme_bw()
+ggplot(data = diff_second, aes(x = cddETCCDI, y = r95pETCCDI)) +
+  ggtitle(paste("Average % Change'26-36 cdd + cwd")) +
+  geom_point(aes(color = climate_threat)) +
+  scale_colour_manual(values=c("#f6e8c3", "#01665e")) +
+  geom_rug(col=rgb(.5,0,0,alpha=.2)) +
+  xlim(xlims) + ylim(ylims) +
+  xlab("% Change in cddETCCDI from `95-14") +
+  ylab("% Change in r95pETCCDI \n from `95-14") +
+  theme_bw()
+
+first_grid <-  diff_first %>% mutate(cddETCCDI = cut(cddETCCDI, quantile(cddETCCDI), labels = F),
+                                     r95pETCCDI = cut(r95pETCCDI, quantile(r95pETCCDI), labels = F))
+second_grid <-  diff_second %>% mutate(cddETCCDI = cut(cddETCCDI, quantile(cddETCCDI), labels = F),
+                                       r95pETCCDI = cut(r95pETCCDI, quantile(r95pETCCDI), labels = F))
+
+ggplot(diff_first, aes(x = cddETCCDI, y = cwdETCCDI)) +
+  stat_bin2d(aes(fill = after_stat(count), alpha = after_stat(count)), bins = 4, na.rm = T) +
+  scale_fill_gradient(high = "#01665e") +
+  theme_bw()
+
+ggplot(diff_second, aes(x = cddETCCDI, y = cwdETCCDI)) +
+  stat_bin2d(aes(fill = after_stat(count), alpha = after_stat(count)), bins = 4, na.rm = T) +
+  scale_fill_gradient(high = "#01665e") +
+  theme_bw()
+
+dev.off()
+
+
+#### Supp Figure - Spread of % change ----
+pdf(paste0("./visuals/f2_boxplot_", td, ".pdf")) ## start pdf up here
+
+ggplot(data = extreme_comp_data,
+       aes(x=measure, y = diff_first, color = measure)) +
+  geom_boxplot() +
+  labs(x = "Date", y = "% Change from Historical", title = "% Change in Index Historical to 2015-25") +
+  facet_wrap(~category, scales = "free", nrow = 2) +
+  theme_bw()
+ggplot(data = extreme_comp_data, aes(x=measure, y = diff_second, color = measure)) +
+  geom_boxplot() +
+  labs(x = "Date", y = "% Change from Historical", title = "% Change in Index Historical to 2026-36") +
+  facet_wrap(~category, scales = "free", nrow = 2) +
+  theme_bw()
+
+ggplot(data = extreme_comp_data,
+       aes(x=measure, y = diff_abs_first, color = measure)) +
+  geom_boxplot() +
+  labs(x = "Date", y = "Absolute Change from Historical", title = "Absolute Change in Index Historical to 2015-25") +
+  facet_wrap(~category, scales = "free", nrow = 2) +
+  theme_bw()
+ggplot(data = extreme_comp_data, aes(x=measure, y = diff_abs_second, color = measure)) +
+  geom_boxplot() +
+  labs(x = "Date", y = "Absolute Change from Historical", title = "Absolute Change in Index Historical to 2026-36") +
+  facet_wrap(~category, scales = "free", nrow = 2) +
+  theme_bw()
+
+
+dev.off()
+#### Plot maps  ----
+pdf(paste0("./visuals/maps_", td, ".pdf")) ## start pdf up here
+
+ids <- c("r95p", "tx90p", "wsdi", "cwd", "cdd", "txx")
+for(index in ids) {
+
+  #### data setup ----
+  m <- paste0(index, "ETCCDI")
+  data <- left_join(extreme_comp_data %>% filter(measure == m),
+                    kbas %>% select(SitRecID, percent_protected = cum_percPA, protected)) %>%
+    filter(measure == measure) %>%
+    mutate(protected = fct_relevel(protected, c("FP", "P", "NP")),
+           protected_group = cut(percent_protected, 7, labels = F ))
+
+  data_i <- left_join(data,
+                      kba_geometry %>%
+                        filter(SitRecID %in% unique(data$SitRecID)) %>%
+                        select(SitRecID, geometry),
+                      by = "SitRecID") %>% st_set_geometry("geometry") %>%
+    mutate(climate_threat_fill = ifelse(climate_threat, TRUE, NA)) %>%
+    mutate(future_fill = ifelse(diff_first >= .5, "first",
+                                ifelse(diff_second >= .5, "second", "none"))) %>%
+    mutate(future_fill = fct_relevel(future_fill, c("none", "second", "first")))
+
+  ggplot(data = data_i) +
+    ggtitle(paste("KBAs at risk for >50% Change in ", index)) +
+    geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
+    geom_sf(data = data_i, size = 0.0002, aes(fill = future_fill)) +
+    coord_sf(ylim = c(-22, -35), xlim = c(15, 35)) +
+    labs(fill = "Era for Risk") +
+    scale_fill_manual(values = c("#9ebcda", "#8856a7", "#810f7c"),
+                        na.value = "grey") +
+    theme_bw()
+}
+
+dev.off()
+
+  # ####  extremes maps ----
+  # lims <- range(data_i$mean_index, data_i$mean_index_first, data_i$mean_index_second)
+  #
+  # a <- (ggplot(data = data_i) +
+  #         ggtitle(paste("Historic ('01-11)", index)) +
+  #         geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
+  #         geom_sf(data = data_i, size = 0.0002, aes(fill = mean_index)) +
+  #         coord_sf(ylim = c(-22, -35), xlim = c(15, 35)) +
+  #         labs(fill = "Index Value") +
+  #         scale_fill_gradient(low = "#998ec3", high = "#f1a340",
+  #                             na.value = "grey", limits = lims) +
+  #         theme_bw())
+  #
+  # b <- (ggplot(data = data_i) +
+  #         ggtitle(paste("'15-25", index)) +
+  #         geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
+  #         geom_sf(data = data_i, size = 0.0002, aes(fill = mean_index_first)) +
+  #         coord_sf(ylim = c(-22, -35), xlim = c(15, 35)) +
+  #         labs(fill = "Index Value") +
+  #         scale_fill_gradient(low = "#998ec3", high = "#f1a340",
+  #                             na.value = "grey", limits = lims) +
+  #         theme_bw())
+  #
+  # c <- (ggplot(data = data_i) +
+  #         ggtitle(paste("26-36", index)) +
+  #         geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
+  #         geom_sf(data = data_i, size = 0.0002, aes(fill = mean_index_second)) +
+  #         coord_sf(ylim = c(-22, -35), xlim = c(15, 35)) +
+  #         labs(fill = "Index Value") +
+  #         scale_fill_gradient(low = "#998ec3", high = "#f1a340",
+  #                             na.value = "grey", limits = lims) +
+  #         theme_bw())
+  #
+  # print(grid.arrange(a, b, c))
+  #
+  # #### scatter plots ----
+  # ## historic vs next 10
+  # lims <- range(data$diff_first, data$diff_second)
+  # first <- ggplot(data = data, aes(x = diff_first, y = percent_protected)) +
+  #   ggtitle(paste("% Change '15-25", m)) +
+  #   geom_point(aes(color = climate_threat)) + xlim(lims) +
+  #   geom_rug(col=rgb(.5,0,0,alpha=.2)) +
+  #   xlab("% Change in Index from `01-11") + ylab("% Area protected") +
+  #   theme_bw()
+  # second <- ggplot(data = data, aes(x = diff_second, y = percent_protected)) +
+  #   ggtitle(paste("% Change'26-36", m)) +
+  #   geom_point(aes(color = climate_threat)) + xlim(lims) +
+  #   geom_rug(col=rgb(.5,0,0,alpha=.2)) +
+  #   xlab("% Change in Index from `01-11") + ylab("% Area protected") +
+  #   theme_bw()
+  #
+  # print(grid.arrange(first, second))
+  #
+  # #### density plots ----
+  # #historic vs next 10, but protected
+  # lims <- range(0, data$diff_first, data$diff_second)
+  # first <- ggplot(data = data, aes(x = diff_first, y = protected_group, group = protected_group)) +
+  #   geom_density_ridges(aes(fill = protected_group)) +
+  #   scale_fill_gradient(low = "#762a83", high = "#1b7837", na.value = "grey", name = "Protected Group \n (7 High)") +
+  #   xlim(lims) +
+  #   ggtitle(paste("% Change '15-25", m)) +
+  #   xlab("% Change in Index from `01-11") + ylab("% Area protected") +
+  #   theme_ridges()
+  # second <- ggplot(data = data, aes(x = diff_second, y = protected_group, group = protected_group)) +
+  #   geom_density_ridges(aes(fill = protected_group)) +
+  #   scale_fill_gradient(low = "#762a83", high = "#1b7837", na.value = "grey", name = "Protected Group \n (7 High)") +
+  #   xlim(lims) +
+  #   ggtitle(paste("% Change '26-36", m)) +
+  #   xlab("% Change in Index from `01-11") + ylab("% Area protected") +
+  #   theme_ridges()
+  #
+  # print(grid.arrange(first, second))
+  #
+
+
+
+
+dev.off()
+
+# #### Do some ANOVAs that will plot out differences in models ----
 # 
-# data_i <- left_join(kbas,
-#                     kba_geometry %>%
-#                       filter(SitRecID %in% unique(kbas$SitRecID)) %>%
-#                       select(SitRecID, geometry),
-#                     by = "SitRecID") %>% st_set_geometry("geometry") %>%
-#   filter(!is.na(cum_percPA)) %>% rename(percent_protected = cum_percPA)
-# 
-# ## current protection status by percent
-# print(ggplot(data = data_i) +
-#         ggtitle(paste("Current Protection Status")) +
-#         geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
-#         geom_sf(data = data_i, size = 0.0002, aes(fill = percent_protected)) +
-#         coord_sf(ylim = c(-22, -35)) +
-#         labs(fill = "Percent of KBA covered by Protected Areas") +
-#         scale_fill_gradient(low = "#edf8fb", high = "#006d2c", na.value = "grey") +
-#         theme_bw())
-# 
-# ## curernt protection status by group
-# data_i <- data_i %>% mutate(protected = fct_relevel(protected, c("FP", "P", "NP")))
-# print(ggplot(data = data_i) +
-#         ggtitle(paste("Current Coverage Group")) +
-#         geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
-#         geom_sf(data = data_i, size = 0.0002, aes(fill = protected)) +
-#         coord_sf(ylim = c(-22, -35)) +
-#         labs(fill = "Protection Progress") +
-#         scale_fill_manual(values = c("#4d9221", "#66c2a4", "#c51b7d")) +
-#         theme_bw())
-# 
-# ## map of climate threats
-# print(ggplot(data = data_i) +
-#         ggtitle(paste("Climate Threat")) +
-#         geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
-#         geom_sf(data = data_i, size = 0.0002, aes(fill = climate_threat)) +
-#         coord_sf(ylim = c(-22, -35)) +
-#         labs(fill = "IUCN Climate Threatened") +
-#         scale_fill_manual(values = c("#01665e", "#8c510a")) +
-#         theme_bw())
-# 
-# ## bar of protections
-# ggplot(data = data, aes(protected)) +
-#   geom_bar(aes(fill = factor(protected, levels = c("FP", "P", "NP")))) +
-#   labs(xlab = "protected", ylab = "Count of KBAs", fill = "KBA Coverage") +
-#   scale_fill_manual(values = c("#4d9221", "#66c2a4", "#c51b7d")) +
-#   theme_bw()
-# 
-# ## bar of protections and climate threats
-# ggplot(data = data, aes(x = protected, alpha = climate_threat)) +
-#   geom_bar(position = "dodge", aes(fill = factor(protected, levels = c("FP", "P", "NP")))) +
-#   labs(xlab = "Protection Status", ylab = "Count of KBAs", fill = "KBA Coverage") +
-#   scale_fill_manual(values = c("#4d9221", "#66c2a4", "#c51b7d")) +
-#   theme_bw()
+# for(s in unique(plot_data$scenario)) {
+#   if(scenario == "historic") next
+#   for(m in unique(plot_data$measure)){
+#     d <- plot_data %>% filter(scenario == s & measure == m, 
+#                               year %in% c(2015:2025))
+#     aov(mean ~ year * gcm, data = d)
+#     
+#   }
+# }
 # 
 # 
-# ## and who is in charge (governance type)
-# pas_i <- left_join(governance, pas %>% select(WDPAID, geometry), by = "WDPAID") %>%
-#   st_set_geometry("geometry") %>%
-#   filter(!is.na(GOV_TYPE))
-# ggplot(data = pas_i) +
-#   ggtitle(paste("Governance Type (with KBA boundaries)")) +
-#   geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
-#   geom_sf(data = pas_i, size = 0.0002, aes(fill = GOV_TYPE)) +
-#   geom_sf(data = data_i, size = 0.002, fill = "transparent") +
-#   coord_sf(ylim = c(-22, -35)) +
-#   scale_fill_discrete(na.value = "grey") +
-#   labs(fill = "Gov Type") +
-#   theme_bw()
+# #### Loop through and make the same figures for each measure
+# next_10 <- plot_data %>% group_by(SitRecID, year_group, measure) %>%
+#   summarize(mean_sd = sd(mean), mean_index = mean(mean)) %>% filter(year_group < 3) %>% 
+#   pivot_wider(id_cols = c(SitRecID, measure), names_from = year_group, values_from = c("mean_sd", "mean_index")) %>% 
+#   mutate(diff_mean = mean_index_2 - mean_index_1, 
+#          climate_threat = ifelse(SitRecID %in% ids, "Y", "N"))
 # 
-# ggplot(data = pas_i) +
-#   ggtitle(paste("Governance Type (w/o KBA boundaries)")) +
-#   geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
-#   geom_sf(data = pas_i, size = 0.0002, aes(fill = GOV_TYPE)) +
-#   #geom_sf(data = data_i, size = 0.002, fill = "transparent") +
-#   coord_sf(ylim = c(-22, -35)) +
-#   scale_fill_discrete(na.value = "grey") +
-#   labs(fill = "Gov Type") +
-#   theme_bw()
-# 
-# dev.off()
-# #### Figure 2 - Plot model agreement ---- 
-# pdf(paste0("./visuals/model_agreement_", td, ".pdf")) ## start pdf up here
-# 
-# e <- extreme_comp_data %>% select(SitRecID, measure, 
-#                                   firstdecade = diff_first, 
-#                                   seconddecade = diff_second) %>% 
-#   pivot_longer(cols = c(firstdecade, seconddecade), names_to = "X")
-# 
-# model_agreement <- left_join(model_agreement, e, by = c("X", "SitRecID", "measure")) %>% 
-#   mutate(confidence = ifelse(over0 > .9 | under0 > .9, "virtually certain", 
-#                              ifelse(over0 > .6 | under0 > .6, "very likely",
-#                                     NA)))
-# ## plot map of all KBAs
-# data_i <- left_join(model_agreement,
-#                     kba_geometry %>%
-#                       filter(SitRecID %in% unique(data$SitRecID)) %>%
-#                       select(SitRecID, geometry),
-#                     by = "SitRecID") %>% st_set_geometry("geometry") %>%
-#   mutate(climate_threat_fill = ifelse(climate_threat, TRUE, NA)) %>%
-#   mutate(future_fill = ifelse(diff_first >= .5, "first",
-#                               ifelse(diff_second >= .5, "second", "none"))) %>%
-#   mutate(future_fill = fct_relevel(future_fill, c("none", "second", "first")))
-# 
-# for(i in indexes) {
+# for(index in unique(next_10$measure)) {
 #   
-#   ggplot(data = data_i %>% measure == i) +
-#     ggtitle(paste("Model Agreement", i)) +
+#   ### Average of index for every 10 years (about)
+#   next_10_i <- next_10 %>% filter(measure == index)
+#   next_10_i <- left_join(next_10_i, kba_geometry) %>% st_set_geometry("geometry")
+#   
+#   print(ggplot(data = next_10_i) +
+#     ggtitle(paste("Change in Index (avg 2036-2026 minus 2025-2015) ", index)) +
 #     geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
-#     geom_sf(data = data_i, size = 0.0002, aes(fill = values, color = confidence)) +
-#     geom_polygon_pattern(aes(pattern_type = confidence), pattern = 'magick',
-#                          pattern_fill = 'black') + 
-#     coord_sf(ylim = c(-22, -35), xlim = c(15, 35)) +
-#     labs(fill = "Average Change") +
-#     scale_fill_continuous(low = "#67a9cf", high = "#ef8a62",
-#                       na.value = "grey") +
-#     theme_bw()
+#     geom_sf(data = next_10_i, size = 0.0002, aes(fill = diff_mean)) +
+#     coord_sf(ylim = c(-22, -35)) +
+#     scale_fill_continuous(na.value = "grey") +
+#     labs(fill = "Change in Index") +
+#     theme_bw())
 #   
-#   ## bar of protections
-#   ggplot(data = model_agreement, aes(confidence)) +
-#     geom_bar(aes(fill = factor(confidence, levels = c("virtually certain", "very likely")))) +
-#     labs(xlab = "Model Agreement", ylab = "Count of KBAs", fill = "Confidence") +
-#     scale_fill_manual(values = c("#4d9221", "#66c2a4", "#c51b7d")) +
-#     theme_bw()
-#   
-#   ## first decade plot range of each measure (average across all KBAs)
-#   ggplot(data = model_agreement %>% filter(X = "firstdecade"),
-#          aes(x = measure, y = mid, ymin = low, ymax = high)) +
-#     geom_point(position = position_dodge2(1)) +
-#     geom_errorbar(width = 1, position = position_dodge2(1)) +
-#     geom_hline(yintercept=coef_quants[5,2],  linetype="dashed",
-#                color = "red", size=.5) +
-#     geom_vline(xintercept = 4.5, color = "red") +
-#     labs(x = "Race", y = "Change in 3√MI per degree increase C",
-#          title = paste0("Fixed Effects Slope for Income groups \n",
-#                         "r2:", round(summary(m)$r2adj, 3),
-#                         "proj r2:", round(summary(m)$P.r.squared,3))) +
-#     theme_bw()
-#   
-#   ## second decade 
-#   
-# }
-# 
-# ## Pl
-# #### Loop through and plot 2 decades of % change ----
-# for(index in indexes) {
-#   
-#   # select correct measure
-#   data <- extreme_comp_data %>% filter(measure == paste0(index, "ETCCDI"))
-#   model_agreement %>% pivot_wider(id_cols = c(SitRecID, measure), 
-#                                   names_from = X,
-#                                   values_from = c(low, high, over0, under0, over100))
-#   data <- left_join(data, model_agreement, by = c("SitRecID", "measure"))
-#   data_i <- left_join(data,
-#                       kba_geometry %>% filter(SitRecID %in% unique(data$SitRecID)),
-#                       by = "SitRecID") %>% st_set_geometry("geometry")
-#   
-#   
-#   print(ggplot(data = data_i) +
-#           ggtitle(paste("Average 2015-2025", index)) +
-#           geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
-#           geom_sf(data = data_i, size = 0.0002, aes(fill = mean_index_first)) +
-#           coord_sf(ylim = c(-22, -35)) +
-#           labs(fill = "Change in Index") +
-#           scale_fill_gradient(low = "#998ec3", high = "#f1a340", na.value = "grey") +
-#           facet_wrap(~ scenario.y, nrow = 3) +
-#           theme_bw())
-#   
-#   print(ggplot(data = data_i) +
-#           ggtitle(paste("Average 2026-2036", index)) +
-#           geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
-#           geom_sf(data = data_i, size = 0.0002, aes(fill = mean_index_second)) +
-#           coord_sf(ylim = c(-22, -35)) +
-#           labs(fill = "Change in Index") +
-#           scale_fill_gradient(low = "#998ec3", high = "#f1a340", na.value = "grey") +
-#           facet_wrap(~ scenario.y, nrow = 3) +
-#           theme_bw())
-#   
-#   print(ggplot(data = data_i) +
-#           ggtitle(paste("Diff Historical + 2015-2025", index)) +
-#           geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
-#           geom_sf(data = data_i, size = 0.0002, aes(fill = diff_first)) +
-#           coord_sf(ylim = c(-22, -35)) +
-#           labs(fill = "Change in Index") +
-#           scale_fill_gradient(low = "#998ec3", high = "#f1a340", na.value = "grey") +
-#           facet_wrap(~ scenario.y, nrow = 3) +
-#           theme_bw())
-#   
-#   print(ggplot(data = data_i) +
-#           ggtitle(paste("Diff Historical + 2026-2036", index)) +
-#           geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
-#           geom_sf(data = data_i, size = 0.0002, aes(fill = diff_second)) +
-#           coord_sf(ylim = c(-22, -35)) +
-#           labs(fill = "Change in Index") +
-#           scale_fill_gradient(low = "#998ec3", high = "#f1a340", na.value = "grey") +
-#           facet_wrap(~ scenario.y, nrow = 3) +
-#           theme_bw())
-#   
-#   reg <- lm(mean_index_first ~ mean_index, data = data)
-#   print(ggplot(data = data, aes(x = mean_index, y = mean_index_first)) +
-#           ggtitle(paste("Change historical to '15-25 + climate threat ", index)) +
-#           geom_point(aes(color = climate_threat)) +
-#           geom_abline(slope=reg$coefficients[2], intercept = reg$coefficients[1]) +
-#           facet_wrap(~ scenario.y, nrow = 3) +
-#           xlab("Average Index Hist") + ylab("Average Index 2015-2025") +
-#           theme_bw())
-#   
-#   
-#   reg <- lm(mean_index_second ~ mean_index, data = data)
-#   print(ggplot(data = data, aes(x = mean_index, y = mean_index_second)) +
-#           ggtitle(paste("Change historical to '26-36 + climate threat ", index)) +
-#           geom_point(aes(color = climate_threat)) +
-#           geom_abline(slope=reg$coefficients[2], intercept = reg$coefficients[1]) +
-#           facet_wrap(~ scenario.y, nrow = 3) +
-#           xlab("Average Index Hist") + ylab("Average Index 2026-2036") +
-#           theme_bw())
-#   
-# }
-# 
-# dev.off()
-# #### Figure 3 high heat (wdsi + txx + climate threat) ----
-# pdf(paste0("./visuals/f3_scatterplots_", td, ".pdf")) ## start pdf up here
-# 
-# data <- left_join(extreme_comp_data,
-#                   kbas %>% select(SitRecID, percent_protected = cum_percPA, protected)) %>%
-#   mutate(protected = fct_relevel(protected, c("FP", "P", "NP")),
-#          protected_group = cut(percent_protected, 7, labels = F ))
-# 
-# diff_first <- data %>% pivot_wider(id_cols = c(SitRecID, climate_threat, protected, percent_protected),
-#                                   names_from = measure,
-#                                   values_from = c("diff_first"))
-# diff_second <- data %>% pivot_wider(id_cols = c(SitRecID, climate_threat),
-#                                                 names_from = measure,
-#                                                 values_from = c("diff_second"))
-# 
-# ## plot heat
-# xlims <- range(diff_first$txxETCCDI, diff_second$txxETCCDI)
-# ylims <- range(diff_first$wsdiETCCDI, diff_second$wsdiETCCDI)
-# 
-# ggplot(data = diff_first, aes(x = txxETCCDI, y = wsdiETCCDI)) +
-#   ggtitle(paste("Average % Change '15-25 tx90p + wsdi")) +
-#   geom_point(aes(color = climate_threat)) +
-#   scale_colour_manual(values=c("#f6e8c3", "#01665e")) +
-#   geom_rug(col=rgb(.5,0,0,alpha=.2)) +
-#   xlim(xlims) + ylim(ylims) +
-#   xlab("% Change in txxETCCDI from `95-14") +
-#   ylab("% Change in wsdiETCCDI \n from `95-14") +
-#   theme_bw()
-# 
-# ggplot(data = diff_second, aes(x = txxETCCDI, y = wsdiETCCDI)) +
-#   ggtitle(paste("Average % Change'26-36 tx90p + wsdi")) +
-#   geom_point(aes(color = climate_threat)) +
-#   scale_colour_manual(values=c("#f6e8c3", "#01665e")) +
-#   geom_rug(col=rgb(.5,0,0,alpha=.2)) +
-#   xlim(xlims) + ylim(ylims) +
-#   xlab("% Change in tx90pETCCDI from `95-14") +
-#   ylab("% Change in wsdiETCCDI \n from `95-14") +
-#   theme_bw()
-# 
-# ## make grid data
-# 
-# ggplot(diff_first, aes(x = txxETCCDI, y = wsdiETCCDI)) +
-#     stat_bin2d(aes(fill = after_stat(count), alpha = after_stat(count)), bins = 4, na.rm = T) +
-#   scale_fill_gradient(high = "#01665e") +
-#   theme_bw()
-# 
-# ggplot(diff_second, aes(x = txxETCCDI, y = wsdiETCCDI)) +
-#   stat_bin2d(aes(fill = after_stat(count), alpha = after_stat(count)), bins = 4, na.rm = T) +
-#   scale_fill_gradient(high = "#01665e") +
-#   theme_bw()
-# 
-# dev.off()
-# #### Figure 4plot wet /dry (cdd, cwd, txx) ----
-# pdf(paste0("./visuals/f4_scatterplots_", td, ".pdf")) ## start pdf up here
-# 
-# xlims <- range(diff_first$cddETCCDI, diff_second$cddETCCDI)
-# ylims <- range(diff_first$r95pETCCDI, diff_second$r95pETCCDI)
-# 
-# ggplot(data = diff_first, aes(x = cddETCCDI, y = r95pETCCDI)) +
-#   ggtitle(paste("Average % Change '15-25 cdd + cwd")) +
-#   geom_point(aes(color = climate_threat)) +
-#   geom_rug(col=rgb(.5,0,0,alpha=.2)) +
-#   xlim(xlims) + ylim(ylims) +
-#   scale_colour_manual(values=c("#f6e8c3", "#01665e")) +
-#   xlab("% Change in cddETCCDI from `95-14") +
-#   ylab("% Change in r95pETCCDI \n from `95-14") +
-#   theme_bw()
-# ggplot(data = diff_second, aes(x = cddETCCDI, y = r95pETCCDI)) +
-#   ggtitle(paste("Average % Change'26-36 cdd + cwd")) +
-#   geom_point(aes(color = climate_threat)) +
-#   scale_colour_manual(values=c("#f6e8c3", "#01665e")) +
-#   geom_rug(col=rgb(.5,0,0,alpha=.2)) +
-#   xlim(xlims) + ylim(ylims) +
-#   xlab("% Change in cddETCCDI from `95-14") +
-#   ylab("% Change in r95pETCCDI \n from `95-14") +
-#   theme_bw()
-# 
-# first_grid <-  diff_first %>% mutate(cddETCCDI = cut(cddETCCDI, quantile(cddETCCDI), labels = F),
-#                                      r95pETCCDI = cut(r95pETCCDI, quantile(r95pETCCDI), labels = F))
-# second_grid <-  diff_second %>% mutate(cddETCCDI = cut(cddETCCDI, quantile(cddETCCDI), labels = F),
-#                                        r95pETCCDI = cut(r95pETCCDI, quantile(r95pETCCDI), labels = F))
-# 
-# ggplot(diff_first, aes(x = cddETCCDI, y = cwdETCCDI)) +
-#   stat_bin2d(aes(fill = after_stat(count), alpha = after_stat(count)), bins = 4, na.rm = T) +
-#   scale_fill_gradient(high = "#01665e") +
-#   theme_bw()
-# 
-# ggplot(diff_second, aes(x = cddETCCDI, y = cwdETCCDI)) +
-#   stat_bin2d(aes(fill = after_stat(count), alpha = after_stat(count)), bins = 4, na.rm = T) +
-#   scale_fill_gradient(high = "#01665e") +
-#   theme_bw()
-# 
-# dev.off()
-# 
-# 
-# #### Supp Figure - Spread of % change ----
-# pdf(paste0("./visuals/f2_boxplot_", td, ".pdf")) ## start pdf up here
-# 
-# ggplot(data = extreme_comp_data,
-#        aes(x=measure, y = diff_first, color = measure)) +
-#   geom_boxplot() +
-#   labs(x = "Date", y = "% Change from Historical", title = "% Change in Index Historical to 2015-25") +
-#   facet_wrap(~category, scales = "free", nrow = 2) +
-#   theme_bw()
-# ggplot(data = extreme_comp_data, aes(x=measure, y = diff_second, color = measure)) +
-#   geom_boxplot() +
-#   labs(x = "Date", y = "% Change from Historical", title = "% Change in Index Historical to 2026-36") +
-#   facet_wrap(~category, scales = "free", nrow = 2) +
-#   theme_bw()
-# 
-# ggplot(data = extreme_comp_data,
-#        aes(x=measure, y = diff_abs_first, color = measure)) +
-#   geom_boxplot() +
-#   labs(x = "Date", y = "Absolute Change from Historical", title = "Absolute Change in Index Historical to 2015-25") +
-#   facet_wrap(~category, scales = "free", nrow = 2) +
-#   theme_bw()
-# ggplot(data = extreme_comp_data, aes(x=measure, y = diff_abs_second, color = measure)) +
-#   geom_boxplot() +
-#   labs(x = "Date", y = "Absolute Change from Historical", title = "Absolute Change in Index Historical to 2026-36") +
-#   facet_wrap(~category, scales = "free", nrow = 2) +
-#   theme_bw()
-# 
-# 
-# dev.off()
-# #### Plot maps  ----
-# pdf(paste0("./visuals/maps_", td, ".pdf")) ## start pdf up here
-# 
-# ids <- c("r95p", "tx90p", "wsdi", "cwd", "cdd", "txx")
-# for(index in ids) {
-# 
-#   #### data setup ----
-#   m <- paste0(index, "ETCCDI")
-#   data <- left_join(extreme_comp_data %>% filter(measure == m),
-#                     kbas %>% select(SitRecID, percent_protected = cum_percPA, protected)) %>%
-#     filter(measure == measure) %>%
-#     mutate(protected = fct_relevel(protected, c("FP", "P", "NP")),
-#            protected_group = cut(percent_protected, 7, labels = F ))
-# 
-#   data_i <- left_join(data,
-#                       kba_geometry %>%
-#                         filter(SitRecID %in% unique(data$SitRecID)) %>%
-#                         select(SitRecID, geometry),
-#                       by = "SitRecID") %>% st_set_geometry("geometry") %>%
-#     mutate(climate_threat_fill = ifelse(climate_threat, TRUE, NA)) %>%
-#     mutate(future_fill = ifelse(diff_first >= .5, "first",
-#                                 ifelse(diff_second >= .5, "second", "none"))) %>%
-#     mutate(future_fill = fct_relevel(future_fill, c("none", "second", "first")))
-# 
-#   ggplot(data = data_i) +
-#     ggtitle(paste("KBAs at risk for >50% Change in ", index)) +
+#   print(ggplot(data = next_10_i) +
+#     ggtitle(paste("SD 2025-2015 ", index)) +
 #     geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
-#     geom_sf(data = data_i, size = 0.0002, aes(fill = future_fill)) +
-#     coord_sf(ylim = c(-22, -35), xlim = c(15, 35)) +
-#     labs(fill = "Era for Risk") +
-#     scale_fill_manual(values = c("#9ebcda", "#8856a7", "#810f7c"),
-#                         na.value = "grey") +
-#     theme_bw()
+#     geom_sf(data = next_10_i, size = 0.0002, aes(fill = mean_sd_1)) +
+#     coord_sf(ylim = c(-22, -35)) +
+#     scale_fill_continuous(na.value = "grey") +
+#     labs(fill = "Standard Deviation") +
+#     theme_bw())
+#   
+#   print(ggplot(data = next_10_i) +
+#     ggtitle(paste("SD 2026-2036 ", index)) +
+#     geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
+#     geom_sf(data = next_10_i, size = 0.0002, aes(fill = mean_sd_2)) +
+#     coord_sf(ylim = c(-22, -35)) +
+#     scale_fill_continuous(na.value = "grey") +
+#     labs(fill = "Standard Deviation") +
+#     theme_bw())
+#   
 # }
 # 
 # dev.off()
 # 
-#   # ####  extremes maps ----
-#   # lims <- range(data_i$mean_index, data_i$mean_index_first, data_i$mean_index_second)
-#   #
-#   # a <- (ggplot(data = data_i) +
-#   #         ggtitle(paste("Historic ('01-11)", index)) +
-#   #         geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
-#   #         geom_sf(data = data_i, size = 0.0002, aes(fill = mean_index)) +
-#   #         coord_sf(ylim = c(-22, -35), xlim = c(15, 35)) +
-#   #         labs(fill = "Index Value") +
-#   #         scale_fill_gradient(low = "#998ec3", high = "#f1a340",
-#   #                             na.value = "grey", limits = lims) +
-#   #         theme_bw())
-#   #
-#   # b <- (ggplot(data = data_i) +
-#   #         ggtitle(paste("'15-25", index)) +
-#   #         geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
-#   #         geom_sf(data = data_i, size = 0.0002, aes(fill = mean_index_first)) +
-#   #         coord_sf(ylim = c(-22, -35), xlim = c(15, 35)) +
-#   #         labs(fill = "Index Value") +
-#   #         scale_fill_gradient(low = "#998ec3", high = "#f1a340",
-#   #                             na.value = "grey", limits = lims) +
-#   #         theme_bw())
-#   #
-#   # c <- (ggplot(data = data_i) +
-#   #         ggtitle(paste("26-36", index)) +
-#   #         geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
-#   #         geom_sf(data = data_i, size = 0.0002, aes(fill = mean_index_second)) +
-#   #         coord_sf(ylim = c(-22, -35), xlim = c(15, 35)) +
-#   #         labs(fill = "Index Value") +
-#   #         scale_fill_gradient(low = "#998ec3", high = "#f1a340",
-#   #                             na.value = "grey", limits = lims) +
-#   #         theme_bw())
-#   #
-#   # print(grid.arrange(a, b, c))
-#   #
-#   # #### scatter plots ----
-#   # ## historic vs next 10
-#   # lims <- range(data$diff_first, data$diff_second)
-#   # first <- ggplot(data = data, aes(x = diff_first, y = percent_protected)) +
-#   #   ggtitle(paste("% Change '15-25", m)) +
-#   #   geom_point(aes(color = climate_threat)) + xlim(lims) +
-#   #   geom_rug(col=rgb(.5,0,0,alpha=.2)) +
-#   #   xlab("% Change in Index from `01-11") + ylab("% Area protected") +
-#   #   theme_bw()
-#   # second <- ggplot(data = data, aes(x = diff_second, y = percent_protected)) +
-#   #   ggtitle(paste("% Change'26-36", m)) +
-#   #   geom_point(aes(color = climate_threat)) + xlim(lims) +
-#   #   geom_rug(col=rgb(.5,0,0,alpha=.2)) +
-#   #   xlab("% Change in Index from `01-11") + ylab("% Area protected") +
-#   #   theme_bw()
-#   #
-#   # print(grid.arrange(first, second))
-#   #
-#   # #### density plots ----
-#   # #historic vs next 10, but protected
-#   # lims <- range(0, data$diff_first, data$diff_second)
-#   # first <- ggplot(data = data, aes(x = diff_first, y = protected_group, group = protected_group)) +
-#   #   geom_density_ridges(aes(fill = protected_group)) +
-#   #   scale_fill_gradient(low = "#762a83", high = "#1b7837", na.value = "grey", name = "Protected Group \n (7 High)") +
-#   #   xlim(lims) +
-#   #   ggtitle(paste("% Change '15-25", m)) +
-#   #   xlab("% Change in Index from `01-11") + ylab("% Area protected") +
-#   #   theme_ridges()
-#   # second <- ggplot(data = data, aes(x = diff_second, y = protected_group, group = protected_group)) +
-#   #   geom_density_ridges(aes(fill = protected_group)) +
-#   #   scale_fill_gradient(low = "#762a83", high = "#1b7837", na.value = "grey", name = "Protected Group \n (7 High)") +
-#   #   xlim(lims) +
-#   #   ggtitle(paste("% Change '26-36", m)) +
-#   #   xlab("% Change in Index from `01-11") + ylab("% Area protected") +
-#   #   theme_ridges()
-#   #
-#   # print(grid.arrange(first, second))
-#   #
 # 
 # 
-# 
-# 
-# dev.off()
-# 
-# # #### Do some ANOVAs that will plot out differences in models ----
-# # 
-# # for(s in unique(plot_data$scenario)) {
-# #   if(scenario == "historic") next
-# #   for(m in unique(plot_data$measure)){
-# #     d <- plot_data %>% filter(scenario == s & measure == m, 
-# #                               year %in% c(2015:2025))
-# #     aov(mean ~ year * gcm, data = d)
-# #     
-# #   }
-# # }
-# # 
-# # 
-# # #### Loop through and make the same figures for each measure
-# # next_10 <- plot_data %>% group_by(SitRecID, year_group, measure) %>%
-# #   summarize(mean_sd = sd(mean), mean_index = mean(mean)) %>% filter(year_group < 3) %>% 
-# #   pivot_wider(id_cols = c(SitRecID, measure), names_from = year_group, values_from = c("mean_sd", "mean_index")) %>% 
-# #   mutate(diff_mean = mean_index_2 - mean_index_1, 
-# #          climate_threat = ifelse(SitRecID %in% ids, "Y", "N"))
-# # 
-# # for(index in unique(next_10$measure)) {
-# #   
-# #   ### Average of index for every 10 years (about)
-# #   next_10_i <- next_10 %>% filter(measure == index)
-# #   next_10_i <- left_join(next_10_i, kba_geometry) %>% st_set_geometry("geometry")
-# #   
-# #   print(ggplot(data = next_10_i) +
-# #     ggtitle(paste("Change in Index (avg 2036-2026 minus 2025-2015) ", index)) +
-# #     geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
-# #     geom_sf(data = next_10_i, size = 0.0002, aes(fill = diff_mean)) +
-# #     coord_sf(ylim = c(-22, -35)) +
-# #     scale_fill_continuous(na.value = "grey") +
-# #     labs(fill = "Change in Index") +
-# #     theme_bw())
-# #   
-# #   print(ggplot(data = next_10_i) +
-# #     ggtitle(paste("SD 2025-2015 ", index)) +
-# #     geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
-# #     geom_sf(data = next_10_i, size = 0.0002, aes(fill = mean_sd_1)) +
-# #     coord_sf(ylim = c(-22, -35)) +
-# #     scale_fill_continuous(na.value = "grey") +
-# #     labs(fill = "Standard Deviation") +
-# #     theme_bw())
-# #   
-# #   print(ggplot(data = next_10_i) +
-# #     ggtitle(paste("SD 2026-2036 ", index)) +
-# #     geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
-# #     geom_sf(data = next_10_i, size = 0.0002, aes(fill = mean_sd_2)) +
-# #     coord_sf(ylim = c(-22, -35)) +
-# #     scale_fill_continuous(na.value = "grey") +
-# #     labs(fill = "Standard Deviation") +
-# #     theme_bw())
-# #   
-# # }
-# # 
-# # dev.off()
-# # 
-# # 
-# # 
