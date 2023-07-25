@@ -1,6 +1,8 @@
 
 The following have been reloaded with a version change:
-  1) gcc/6.3.0 => gcc/10.1.0
+  1) R/3.5.1 => R/4.1.2             4) java/1.8.0_131 => java/11.0.11
+  2) curl/7.54.0 => curl/7.81.0     5) openblas/0.2.19 => openblas/0.3.10
+  3) gcc/6.3.0 => gcc/10.1.0
 
 
 The following have been reloaded with a version change:
@@ -98,7 +100,15 @@ dbl (2): ...1, SitRecID
 override using the `.groups` argument.
 `summarise()` has grouped output by 'SitRecID', 'scenario', 'year_group'. You
 can override using the `.groups` argument.
-Error in h(simpleError(msg, call)) : 
-  error in evaluating the argument 'x' in selecting a method for function 'print': object 'world' not found
-Calls: print ... layer_sf -> layer -> fortify -> .handleSimpleError -> h
+although coordinates are longitude/latitude, st_intersects assumes that they are planar
+Error in `filter()`:
+! Problem while computing `..3 = !is.na(kba)`.
+Caused by error in `mask$eval_all_filter()`:
+! object 'kba' not found
+Backtrace:
+  1. dplyr::left_join(...)
+ 10. dplyr:::filter.data.frame(., year == 2022, ISO3 == COUNTRY, !is.na(kba))
+ 11. dplyr:::filter_rows(.data, ..., caller_env = caller_env())
+ 12. dplyr:::filter_eval(dots, mask = mask, error_call = error_call)
+ 14. mask$eval_all_filter(dots, env_filter)
 Execution halted
