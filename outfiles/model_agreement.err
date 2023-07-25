@@ -1,0 +1,104 @@
+
+The following have been reloaded with a version change:
+  1) gcc/6.3.0 => gcc/10.1.0
+
+
+The following have been reloaded with a version change:
+  1) gcc/10.1.0 => gcc/9.1.0
+
+Loading required package: sp
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:raster’:
+
+    intersect, select, union
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+Linking to GEOS 3.6.2, GDAL 3.4.1, PROJ 8.2.1; sf_use_s2() is TRUE
+── Attaching packages ─────────────────────────────────────── tidyverse 1.3.1 ──
+✔ ggplot2 3.3.5     ✔ purrr   0.3.4
+✔ tibble  3.1.8     ✔ stringr 1.4.0
+✔ tidyr   1.2.0     ✔ forcats 0.5.1
+✔ readr   2.1.2     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ tidyr::extract() masks raster::extract()
+✖ dplyr::filter()  masks stats::filter()
+✖ dplyr::lag()     masks stats::lag()
+✖ dplyr::select()  masks raster::select()
+Linking to liblwgeom 3.0.0beta1 r16016, GEOS 3.6.2, PROJ 8.2.1
+Loading required package: Matrix
+
+Attaching package: ‘Matrix’
+
+The following objects are masked from ‘package:tidyr’:
+
+    expand, pack, unpack
+
+
+Attaching package: ‘lubridate’
+
+The following objects are masked from ‘package:raster’:
+
+    intersect, union
+
+The following objects are masked from ‘package:base’:
+
+    date, intersect, setdiff, union
+
+
+Attaching package: ‘reshape2’
+
+The following object is masked from ‘package:tidyr’:
+
+    smiths
+
+
+Attaching package: ‘gridExtra’
+
+The following object is masked from ‘package:dplyr’:
+
+    combine
+
+Loading required package: SparseM
+
+Attaching package: ‘SparseM’
+
+The following object is masked from ‘package:base’:
+
+    backsolve
+
+
+Attaching package: ‘jtools’
+
+The following objects are masked from ‘package:interactions’:
+
+    cat_plot, interact_plot, johnson_neyman, probe_interaction,
+    sim_slopes
+
+Spherical geometry (s2) switched off
+New names:
+• `` -> `...1`
+Rows: 26003 Columns: 5
+── Column specification ────────────────────────────────────────────────────────
+Delimiter: ","
+chr (3): Type, Country, ISO
+dbl (2): ...1, SitRecID
+
+ℹ Use `spec()` to retrieve the full column specification for this data.
+ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
+`summarise()` has grouped output by 'SitRecID', 'scenario', 'measure'. You can
+override using the `.groups` argument.
+`summarise()` has grouped output by 'SitRecID', 'scenario', 'year_group'. You
+can override using the `.groups` argument.
+Error in h(simpleError(msg, call)) : 
+  error in evaluating the argument 'x' in selecting a method for function 'print': object 'world' not found
+Calls: print ... layer_sf -> layer -> fortify -> .handleSimpleError -> h
+Execution halted

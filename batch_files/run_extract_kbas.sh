@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=exKBAs
 #SBATCH --nodes=1
-#SBATCH --array=1-50%5
+#SBATCH --array=1-104%5
 #SBATCH --error=/oak/stanford/groups/omramom/group_members/aminaly/biodiversity_cmip6/outfiles/extractKBAs.err
 #SBATCH --output=/oak/stanford/groups/omramom/group_members/aminaly/biodiversity_cmip6/outfiles/extractKBAs.out
 #SBATCH --time=48:00:00
