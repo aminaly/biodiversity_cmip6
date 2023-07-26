@@ -168,3 +168,78 @@ get_wdpaid <- function(index, pas) {
 
 
 
+
+
+#### Model Agreement ----
+mod_agreement <- function(extreme_data, measures, sites, reps) {
+  model_agreement <- c()
+  ## bootstrap each site
+  for(m in 1:length(measures)) {
+    measure <- measures[m]
+    print(measure)
+    
+    ## pull this measure
+    hist <- extreme_data %>% 
+      filter(measure == measure,
+             scenario == "historical",
+             year %in% c(1995:2014))  
+    comp1 <- extreme_data %>% 
+      filter(measure == measure,
+             year %in% c(2015:2025)) %>% 
+      filter(if(ERA != "") scenario == ERA)
+    comp2 <- extreme_data %>% 
+      filter(measure == measure,
+             year %in% c(2026:2036)) %>% 
+      filter(if(ERA != "") scenario == ERA)
+    
+    ## pull this site, sample 1000 times and exit loop with 95% CI, % >0, and %<0 
+    for(s in 1:length(sites)) {
+      site <- sites[s]
+      print(site)
+      
+      hist_m <- hist %>% filter(SitRecID == site)
+      comp1_m <- comp1 %>% filter(SitRecID == site)
+      comp2_m <- comp2 %>% filter(SitRecID == site)
+      
+      boots <- c()
+      
+      for(boot in 1:reps) {
+        
+        h <- sample_n(hist_m, nrow(hist_m), replace = T) %>% 
+          summarize(mean_index = mean(mean, na.rm = T)) %>% pull(mean_index)
+        c1 <- sample_n(comp1_m, nrow(comp1_m), replace = T) %>%
+          summarize(mean_index = mean(mean, na.rm = T)) %>% pull(mean_index)
+        c2 <- sample_n(comp2_m, nrow(comp2_m), replace = T) %>%
+          summarize(mean_index = mean(mean, na.rm = T)) %>% pull(mean_index)
+        
+        if(measure == "txxETCCDI") {
+          boots <- rbind(boots, cbind(firstdecade = (c1 - h),
+                                      seconddecade = (c2 - h)))
+        } else{
+          boots <- rbind(boots, cbind(firstdecade = (c1 - h)/h,
+                                      seconddecade = (c2 - h)/h))          
+        } 
+      }
+      
+      ## using the 1000 boots of all 4, return summary row for this site and add to model agreement
+      low <- apply(boots, 2, quantile, c(0.025), na.rm = T)
+      
+      high <- apply(boots, 2, quantile, c(0.975), na.rm = T)
+      
+      over0 <- apply(boots, 2, function(x) {sum(x > 0)/ reps})
+      
+      under0 <- apply(boots, 2, function(x) {sum(x < 0)/ reps})
+      
+      over100 <- apply(boots, 2, function(x) {sum(abs(x) > 1)/ reps})
+      
+      model_agreement <- rbind(model_agreement,
+                               cbind(SitRecID = site, measure = measure, low, high,
+                                     over0, under0, over100))
+      
+    }
+    
+    
+  }
+  write.csv(model_agreement, "./processed_data/model_agreement.csv")
+  return(model_agreement)
+}
