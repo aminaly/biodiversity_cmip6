@@ -100,15 +100,10 @@ dbl (2): ...1, SitRecID
 override using the `.groups` argument.
 `summarise()` has grouped output by 'SitRecID', 'scenario', 'year_group'. You
 can override using the `.groups` argument.
-although coordinates are longitude/latitude, st_intersects assumes that they are planar
-Error in `filter()`:
-! Problem while computing `..3 = !is.na(kba)`.
-Caused by error in `mask$eval_all_filter()`:
-! object 'kba' not found
+Error in `ggplot()`:
+!   You're passing a function as global data.
+  Have you misspelled the `data` argument in `ggplot()`
 Backtrace:
-  1. dplyr::left_join(...)
- 10. dplyr:::filter.data.frame(., year == 2022, ISO3 == COUNTRY, !is.na(kba))
- 11. dplyr:::filter_rows(.data, ..., caller_env = caller_env())
- 12. dplyr:::filter_eval(dots, mask = mask, error_call = error_call)
- 14. mask$eval_all_filter(dots, env_filter)
+ 1. ggplot2::ggplot(data = data, aes(protected))
+ 2. ggplot2:::ggplot.function(data = data, aes(protected))
 Execution halted
