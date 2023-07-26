@@ -143,7 +143,7 @@ if(file.exists("./processed_data/model_agreement.csv")) {
   extreme_data <- extreme_data %>% mutate(climate_threat = ifelse(SitRecID %in% ids, "Y", "N"))
   measures <- unique(extreme_data$measure)
   sites <- unique(extreme_data$SitRecID)
-  reps <- 5
+  reps <- 1000
   model_agreement <- mod_agreement(extreme_data, measures, sites, reps)
 }
 
