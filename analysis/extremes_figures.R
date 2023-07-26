@@ -139,90 +139,12 @@ extreme_comp_data <- left_join(extreme_comp_data, categories, by = "measure")
 if(file.exists("./processed_data/model_agreement.csv")) {
   model_agreement <- read.csv("./processed_data/model_agreement.csv")
 } else {
-  model_agreement <- c()
   ## as in Singh et al 2014 and Horton et al. 2014 which use IPCC thresholds of 66% agreement 
   extreme_data <- extreme_data %>% mutate(climate_threat = ifelse(SitRecID %in% ids, "Y", "N"))
   measures <- unique(extreme_data$measure)
   sites <- unique(extreme_data$SitRecID)
-  reps <- 1000
-  
-  ## bootstrap each site
-  for(m in 1:length(measures)) {
-    measure <- measures[m]
-    print(measure)
-    
-    ## pull this measure
-    hist <- extreme_data %>% 
-      filter(measure == measure,
-             scenario == "historical",
-             year %in% c(1995:2014))  
-    comp1 <- extreme_data %>% 
-      filter(measure == measure,
-             year %in% c(2015:2025)) %>% 
-      filter(if(ERA != "") scenario == ERA)
-    comp2 <- extreme_data %>% 
-      filter(measure == measure,
-             year %in% c(2026:2036)) %>% 
-      filter(if(ERA != "") scenario == ERA)
-    comp <- extreme_data %>% 
-      filter(measure == measure,
-             year %in% c(2015:2036)) %>% 
-      filter(if(ERA != "") scenario == ERA)
-    
-    ## pull this site, sample 1000 times and exit loop with 95% CI, % >0, and %<0 
-    for(s in 1:length(sites)) {
-      site <- sites[s]
-      print(site)
-      
-      hist_m <- hist %>% filter(SitRecID == site)
-      comp1_m <- comp1 %>% filter(SitRecID == site)
-      comp2_m <- comp2 %>% filter(SitRecID == site)
-      comp_m <- comp %>% filter(SitRecID == site)
-      
-      boots <- c()
-      
-      for(boot in 1:reps) {
-        
-        h <- sample_n(hist_m, nrow(hist_m), replace = T) %>% 
-          summarize(mean_index = mean(mean, na.rm = T)) %>% pull(mean_index)
-        c1 <- sample_n(comp1_m, nrow(comp1_m), replace = T) %>%
-          summarize(mean_index = mean(mean, na.rm = T)) %>% pull(mean_index)
-        c2 <- sample_n(comp2_m, nrow(comp2_m), replace = T) %>%
-          summarize(mean_index = mean(mean, na.rm = T)) %>% pull(mean_index)
-        c <- sample_n(comp_m, nrow(comp_m), replace = T) %>%
-          summarize(mean_index = mean(mean, na.rm = T)) %>% pull(mean_index)
-       
-        if(measure == "txxETCCDI") {
-          boots <- rbind(boots, cbind(firstdecade = (c1 - h),
-                                      seconddecade = (c2 - h), 
-                                      future = (c - h)))
-        } else{
-          boots <- rbind(boots, cbind(firstdecade = (c1 - h)/h,
-                                      seconddecade = (c2 - h)/h, 
-                                      future = (c - h)/h))          
-        } 
-      }
-      
-      ## using the 1000 boots of all 4, return summary row for this site and add to model agreement
-      low <- apply(boots, 2, quantile, c(0.025), na.rm = T)
-  
-      high <- apply(boots, 2, quantile, c(0.975), na.rm = T)
-  
-      over0 <- apply(boots, 2, function(x) {sum(x > 0)/ reps})
-  
-      under0 <- apply(boots, 2, function(x) {sum(x < 0)/ reps})
-  
-      over100 <- apply(boots, 2, function(x) {sum(abs(x) > 1)/ reps})
-  
-      model_agreement <- rbind(model_agreement,
-                               cbind(SitRecID = site, measure = measure, low, high,
-                                     over0, under0, over100))
-      
-    }
-    
-   
-  }
-write.csv(model_agreement, "./processed_data/model_agreement.csv")
+  reps <- 5
+  model_agreement <- mod_agreement(extreme_data, measures, sites, reps)
 }
 
 #### Start Plots ----
@@ -310,19 +232,20 @@ dev.off()
 #### Figure 2 - Plot 4 climate vars and model agreement ---- 
 pdf(paste0("./visuals/model_agreement_", td, ".pdf")) ## start pdf up here
 
-e <- extreme_comp_data %>% select(SitRecID, measure, 
-                                  firstdecade = diff_first, 
-                                  seconddecade = diff_second, 
-                                  climate_threat) %>% 
+e <- extreme_comp_data %>% mutate(firstdecade = diff_first/100, 
+                                  seconddecade = diff_second/100) %>% 
+  select(SitRecID, measure, firstdecade, seconddecade, climate_threat) %>% 
   pivot_longer(cols = c(firstdecade, seconddecade), names_to = "X")
 
 model_agreement <- left_join(model_agreement, e, by = c("X", "SitRecID", "measure")) %>% 
   filter(X != "future") %>%
   mutate(confidence = ifelse(over0 >= .99 | under0 >= .99, "virtually certain",
                              ifelse(over0 >= .9 | under0 >= .9, "very likely",
-                                    ifelse(over0 >= .66 | under0 >= .66, " likely",
+                                    ifelse(over0 >= .66 | under0 >= .66, "likely",
                                            ifelse(over0 >= .33 | under0 >= .33, "neither",
-                                                  "unlikely"))))) 
+                                                  "unlikely"))))) %>%
+  mutate(confidence = fct_relevel(confidence, c("unlikely", "neither", "likely", "very likely", "virtually certain")))
+
 ## plot map of all KBAs
 data_i <- left_join(model_agreement,
                     kba_geometry %>%
@@ -330,52 +253,73 @@ data_i <- left_join(model_agreement,
                       select(SitRecID, geometry),
                     by = "SitRecID") %>% st_set_geometry("geometry") 
 
-for(i in indexes) {
-  
-  ggplot(data = data_i[56:60,] %>% filter(measure == i)) +
-    geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
-    geom_sf(data = data_i, color = NA, aes(fill = value)) +
-    scale_fill_continuous(high = "#ef8a62",
-                          na.value = "grey") +
-    ggtitle(paste("Model Agreement", i)) +
-    coord_sf(ylim = c(-22, -35), xlim = c(15, 35)) +
-    labs(fill = "Average Change") +
-    theme_bw()
-  
-  ggplot(data = data_i[56:60,] %>% filter(measure == i)) +
-    geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
-    geom_sf(data = data_i, color = NA, aes(fill = confidence)) + #67a9cf
-    ggtitle(paste("Model Agreement", i)) +
-    coord_sf(ylim = c(-22, -35), xlim = c(15, 35)) +
-    labs(fill = "Average Change") +
-    theme_bw()
-  
-   ## bar of protections
-  ggplot(data = model_agreement, aes(confidence)) +
-    geom_bar(aes(fill = factor(confidence, levels = c("virtually certain", "very likely")))) +
-    labs(xlab = "Model Agreement", ylab = "Count of KBAs", fill = "Confidence") +
-    scale_fill_manual(values = c("#4d9221", "#66c2a4", "#c51b7d")) +
-    theme_bw()
-  
-  ## first decade plot range of each measure (average across all KBAs)
-  ggplot(data = model_agreement %>% filter(X = "firstdecade"),
-         aes(x = measure, y = mid, ymin = low, ymax = high)) +
-    geom_point(position = position_dodge2(1)) +
-    geom_errorbar(width = 1, position = position_dodge2(1)) +
-    geom_hline(yintercept=coef_quants[5,2],  linetype="dashed",
-               color = "red", size=.5) +
-    geom_vline(xintercept = 4.5, color = "red") +
-    labs(x = "Race", y = "Change in 3√MI per degree increase C",
-         title = paste0("Fixed Effects Slope for Income groups \n",
-                        "r2:", round(summary(m)$r2adj, 3),
-                        "proj r2:", round(summary(m)$P.r.squared,3))) +
-    theme_bw()
-  
-  ## second decade 
-  
+for(dec in c("firstdecade", "seconddecade")) {
+  for(ind in 1:length(indexes)) {
+    i <- indexes[ind]
+    data_ii <- data_i %>% filter(measure == i, X == dec)
+    
+    ### plot this index's change in the first deacade with inset
+    print(ggplot(data = data_ii) +
+      geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
+      geom_sf(data = data_ii, color = NA, aes(fill = value)) +
+      scale_fill_continuous(high = "#ef8a62", na.value = "grey") +
+      ggtitle(paste(dec, i)) +
+      coord_sf(ylim = c(-22, -35), xlim = c(15, 35)) +
+      geom_rect(aes(xmin = 25, xmax = 33, ymin = -34, ymax = -25), 
+                color = "grey", linewidth = 0.02, inherit.aes = FALSE, fill = NA) +
+      labs(fill = "Average Change") +
+      theme_bw())
+    
+    print(ggplot(data = data_ii) +
+      geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
+      geom_sf(data = data_ii, color = NA, aes(fill = value)) +
+      scale_fill_continuous(high = "#ef8a62", na.value = "grey") +
+      ggtitle(paste(dec, i)) +
+      coord_sf(ylim = c(-25, -34), xlim = c(25, 33)) +
+      labs(fill = "Average Change") +
+      theme_bw())
+    
+    ## plot the model certainty with inset
+    print(ggplot(data = data_ii) +
+      geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
+      geom_sf(data = data_ii, color = NA, aes(fill = confidence)) +
+      #scale_fill_manual(values = c("#d0d1e6", "#67a9cf", "#3690c0", "02818a", "016c59")) +
+      ggtitle(paste("Model Agreement", i, dec)) +
+      coord_sf(ylim = c(-22, -35), xlim = c(15, 35)) +
+      geom_rect(aes(xmin = 25, xmax = 33, ymin = -34, ymax = -25), 
+                color = "grey", linewidth = 0.002, inherit.aes = FALSE, fill = NA) +
+      labs(fill = "Model Confidence") +
+      theme_bw())
+    print(ggplot(data = data_ii) +
+      geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
+      geom_sf(data = data_ii, color = NA, aes(fill = confidence)) +
+      #scale_fill_manual(values = c("#01665e", "#02818a", "#3690c0", "67a9cf", "d0d1e6")) +
+      ggtitle(paste("Model Agreement", i, dec)) +
+      coord_sf(ylim = c(-25, -34), xlim = c(25, 33)) +
+      labs(fill = "Model Confidence") +
+      theme_bw())
+    
+    
+    ## barchart of model agreement (for inset?)
+    print(ggplot(data = data_ii %>% st_drop_geometry(), aes(confidence)) +
+      geom_bar(aes(fill = factor(confidence))) +
+      labs(xlab = "Model Agreement", ylab = "Count of KBAs", fill = "Confidence") +
+      scale_fill_manual(values = c("#01665e", "#02818a", "#3690c0", "67a9cf", "d0d1e6")) +
+      theme_bw())
+    
+    print(ggplot(data = data_ii,
+           aes(x = measure, y = value, ymin = low, ymax = high)) +
+      geom_point(position = position_dodge2(1)) +
+      geom_errorbar(width = 1, position = position_dodge2(1)) +
+      labs(x = "Index", y = "Estimated Range of Change Across All Models and KBAs",
+           title = paste0("Average 95% CI of Change for all KBAs")) +
+      theme_bw())
+
+  }
 }
 
-## Pl
+dev.off()
+
 #### Loop through and plot 2 decades of % change ----
 for(index in indexes) {
   
