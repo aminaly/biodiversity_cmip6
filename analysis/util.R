@@ -222,24 +222,29 @@ mod_agreement <- function(extreme_data, measures, sites, reps) {
       }
       
       ## using the 1000 boots of all 4, return summary row for this site and add to model agreement
-      low <- apply(boots, 2, quantile, c(0.025), na.rm = T)
+      #low <- apply(boots, 2, quantile, c(0.025), na.rm = T)
       
-      high <- apply(boots, 2, quantile, c(0.975), na.rm = T)
+      #high <- apply(boots, 2, quantile, c(0.975), na.rm = T)
       
-      over0 <- apply(boots, 2, function(x) {sum(x > 0)/ reps})
+      mid <- apply(boots, 2, quantile, c(.5), na.rm = T)
       
-      under0 <- apply(boots, 2, function(x) {sum(x < 0)/ reps})
+      #over0 <- apply(boots, 2, function(x) {sum(x > 0)/ reps})
       
-      over100 <- apply(boots, 2, function(x) {sum(abs(x) > 1)/ reps})
+      #under0 <- apply(boots, 2, function(x) {sum(x < 0)/ reps})
+      
+      #over100 <- apply(boots, 2, function(x) {sum(abs(x) > 1)/ reps})
+      
+      #model_agreement <- rbind(model_agreement,
+      #                         cbind(SitRecID = site, measure = measure, low, high,
+      #                               over0, under0, over100))
       
       model_agreement <- rbind(model_agreement,
-                               cbind(SitRecID = site, measure = measure, low, high,
-                                     over0, under0, over100))
+                               cbind(SitRecID = site, measure = measure, mid))
       
     }
     
     
   }
-  write.csv(model_agreement, "./processed_data/model_agreement.csv")
+  write.csv(model_agreement, "./processed_data/model_agreement_50.csv")
   return(model_agreement)
 }

@@ -87,14 +87,14 @@ hist <- extreme_data %>%
   filter(scenario == "historical",
          year %in% c(1995:2014)) %>% 
   group_by(SitRecID, scenario, measure, climate_threat) %>%
-  summarize(standard_dev = sd(mean, na.rm = T), mean_index = mean(mean, na.rm = T)) %>%
+  summarize(standard_dev = sd(mean, na.rm = T), mean_index = median(mean, na.rm = T)) %>%
   mutate(year_group = "hist")
 
 comp <- extreme_data %>% 
   filter(year %in% c(2015:2036)) %>% 
   mutate(year_group = cut(year, 2, labels = c("first", "second"))) %>%
   group_by(SitRecID, scenario, year_group, measure) %>%
-  summarize(standard_dev = sd(mean, na.rm = T), mean_index = mean(mean, na.rm = T)) %>%
+  summarize(standard_dev = sd(mean, na.rm = T), mean_index = median(mean, na.rm = T)) %>%
   pivot_wider(id_cols = c(SitRecID, scenario, measure), 
               names_from = year_group, values_from = c("standard_dev", "mean_index")) %>%
   filter(if(ERA != "") scenario == ERA) %>% ungroup %>% select(-scenario)
@@ -137,7 +137,7 @@ extreme_comp_data <- left_join(extreme_comp_data, categories, by = "measure")
 
 #### Model Agreement ----
 if(file.exists("./processed_data/model_agreement.csv")) {
-  model_agreement <- read.csv("./processed_data/model_agreement.csv")
+  model_agreement <- read.csv("./processed_data/model_agreement_50.csv")
 } else {
   ## as in Singh et al 2014 and Horton et al. 2014 which use IPCC thresholds of 66% agreement 
   extreme_data <- extreme_data %>% mutate(climate_threat = ifelse(SitRecID %in% ids, "Y", "N"))
