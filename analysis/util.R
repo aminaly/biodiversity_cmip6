@@ -246,7 +246,7 @@ mod_agreement <- function(extreme_data, measures, sites, reps) {
     
   }
   
-  write.csv(model_agreement, "./processed_data/model_agreement_50.csv")
+  write.csv(model_agreement, paste0("./processed_data/model_agreement_" measures, ".csv"))
   
   model_agreement <- model_agreement %>%
     mutate(confidence = ifelse(over0 >= .99 | under0 >= .99, "virtually certain",
