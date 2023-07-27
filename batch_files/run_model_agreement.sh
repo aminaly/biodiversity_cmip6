@@ -1,6 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=model_agreement
 #SBATCH --nodes=1
+#SBATCH --array=1-4
 #SBATCH --error=/oak/stanford/groups/omramom/group_members/aminaly/biodiversity_cmip6/outfiles/model_agreement.err
 #SBATCH --output=/oak/stanford/groups/omramom/group_members/aminaly/biodiversity_cmip6/outfiles/model_agreement.out
 #SBATCH --time=48:00:00

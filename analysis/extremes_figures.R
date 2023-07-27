@@ -244,10 +244,13 @@ data_i <- left_join(model_agreement,
                       select(SitRecID, geometry),
                     by = "SitRecID") %>% st_set_geometry("geometry") 
 
+world_crop <- st_crop(world, xmin = 25, xmax = 33, ymin = -34, ymax = -25)
+
 for(dec in c("firstdecade", "seconddecade")) {
   for(ind in 1:length(indexes)) {
     i <- indexes[ind]
     data_ii <- data_i %>% filter(measure == i, X == dec)
+    data_ii_crop <- st_crop(data_ii, xmin = 25, xmax = 33, ymin = -34, ymax = -25)
     
     # ### plot this index's change in the first deacade with inset
     # print(ggplot(data = data_ii) +
@@ -257,13 +260,13 @@ for(dec in c("firstdecade", "seconddecade")) {
     #   ggtitle(paste(dec, i)) +
     #   coord_sf(ylim = c(-22, -35), xlim = c(15, 35)) +
     #   geom_rect(aes(xmin = 25, xmax = 33, ymin = -34, ymax = -25), 
-    #             color = "grey", linewidth = 0.02, inherit.aes = FALSE, fill = NA) +
+    #             color = "purple", linewidth = 0.2, inherit.aes = FALSE, fill = NA) +
     #   labs(fill = "Average Change") +
     #   theme_bw())
     # 
-    # print(ggplot(data = data_ii) +
-    #   geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
-    #   geom_sf(data = data_ii, color = NA, aes(fill = mid*100)) +
+    # print(ggplot(data = data_ii_crop) +
+    #   geom_sf(data = world_crop, size = 0.002, fill = "#d9f0a3") +
+    #   geom_sf(data = data_ii_crop, color = NA, aes(fill = mid*100)) +
     #   scale_fill_continuous(high = "#ef8a62", na.value = "grey") +
     #   ggtitle(paste(dec, i)) +
     #   coord_sf(ylim = c(-25, -34), xlim = c(25, 33)) +
@@ -278,15 +281,15 @@ for(dec in c("firstdecade", "seconddecade")) {
       ggtitle(paste("Model Agreement", i, dec)) +
       coord_sf(ylim = c(-22, -35), xlim = c(15, 35)) +
       geom_rect(aes(xmin = 25, xmax = 33, ymin = -34, ymax = -25), 
-                color = "grey", linewidth = 0.002, inherit.aes = FALSE, fill = NA) +
+                color = "purple", linewidth = 0.2, inherit.aes = FALSE, fill = NA) +
       labs(fill = "Model Confidence") +
       theme_bw())
-    print(ggplot(data = data_ii) +
-      geom_sf(data = world, size = 0.002, fill = "#d9f0a3") +
-      geom_sf(data = data_ii, color = NA, aes(fill = confidence)) +
+    print(ggplot(data = data_ii_crop) +
+      geom_sf(data = world_crop, size = 0.002, fill = "#d9f0a3") +
+      geom_sf(data = data_ii_crop, color = NA, aes(fill = confidence)) +
       #scale_fill_manual(values = c("#01665e", "#02818a", "#3690c0", "67a9cf", "d0d1e6")) +
       ggtitle(paste("Model Agreement", i, dec)) +
-      coord_sf(ylim = c(-25, -34), xlim = c(25, 33)) +
+      coord_sf(ylim = c(-25, -34), xlim = c(25, 33), expand = F) +
       labs(fill = "Model Confidence") +
       theme_bw())
     
@@ -298,13 +301,13 @@ for(dec in c("firstdecade", "seconddecade")) {
       scale_fill_manual(values = c("#01665e", "#02818a", "#3690c0", "67a9cf", "d0d1e6")) +
       theme_bw())
     
-    print(ggplot(data = data_ii,
-           aes(x = measure, y = mid, ymin = low, ymax = high)) +
-      geom_point(position = position_dodge2(1)) +
-      geom_errorbar(width = 1, position = position_dodge2(1)) +
-      labs(x = "Index", y = "Estimated Range of Change Across All Models and KBAs",
-           title = paste0("Average 95% CI of Change for all KBAs")) +
-      theme_bw())
+    # print(ggplot(data = data_ii,
+    #        aes(x = measure, y = mid, ymin = low, ymax = high)) +
+    #   geom_point(position = position_dodge2(1)) +
+    #   geom_errorbar(width = 1, position = position_dodge2(1)) +
+    #   labs(x = "Index", y = "Estimated Range of Change Across All Models and KBAs",
+    #        title = paste0("Average 95% CI of Change for all KBAs")) +
+    #   theme_bw())
 
   }
 }
