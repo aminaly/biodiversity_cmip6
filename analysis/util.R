@@ -245,6 +245,15 @@ mod_agreement <- function(extreme_data, measures, sites, reps) {
     
     
   }
-  write.csv(model_agreement, "./processed_data/model_agreement_50.csv")
+  
+  model_agreement <- model_agreement %>%
+    mutate(confidence = ifelse(over0 >= .99 | under0 >= .99, "virtually certain",
+                               ifelse(over0 >= .9 | under0 >= .9, "very likely",
+                                      ifelse(over0 >= .66 | under0 >= .66, "likely",
+                                             ifelse(over0 >= .33 | under0 >= .33, "neither",
+                                                    "unlikely"))))) %>%
+    mutate(confidence = fct_relevel(confidence, c("unlikely", "neither", "likely", "very likely", "virtually certain")))
+  
+  write.csv(model_agreement, "./processed_data/model_agreement.csv")
   return(model_agreement)
 }
