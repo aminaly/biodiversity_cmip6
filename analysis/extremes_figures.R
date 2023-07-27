@@ -24,6 +24,11 @@ library(sf)
 #library(report)
 
 #### Set Global Vars ----
+
+## pick up args from command line/sbatch
+args <- commandArgs(trailingOnly = TRUE)
+measurerep <- as.numeric(args[1])
+
 CLEAN = FALSE ##switch to false if you want to use original KBAs
 td <- format(Sys.Date(), "%m_%d_%Y")
 COUNTRY <- "ZAF"
@@ -141,7 +146,7 @@ if(file.exists("./processed_data/model_agreement_50.csv")) {
 } else {
   ## as in Singh et al 2014 and Horton et al. 2014 which use IPCC thresholds of 66% agreement 
   extreme_data <- extreme_data %>% mutate(climate_threat = ifelse(SitRecID %in% ids, "Y", "N"))
-  measures <- unique(extreme_data$measure)
+  measures <- unique(extreme_data$measure)[measurerep]
   sites <- unique(extreme_data$SitRecID)
   reps <- 1000
   model_agreement <- mod_agreement(extreme_data, measures, sites, reps)

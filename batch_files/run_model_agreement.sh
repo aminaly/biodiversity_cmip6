@@ -15,5 +15,6 @@ ml physics proj geos gdal udunits curl netcdf R/4.1.2;
 ml gcc/9.1.0
 
 cd $OAK/group_members/aminaly/biodiversity_cmip6
-Rscript ./analysis/extremes_figures.R 
+let buffer=$SLURM_ARRAY_TASK_ID
+Rscript ./analysis/extremes_figures.R $buffer
 
