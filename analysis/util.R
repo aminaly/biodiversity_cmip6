@@ -212,7 +212,7 @@ mod_agreement <- function(extreme_data, measures, sites, reps) {
         c2 <- sample_n(comp2_m, nrow(comp2_m), replace = T) %>%
           summarize(mean_index = mean(mean, na.rm = T)) %>% pull(mean_index)
         
-        if(measure == "txxETCCDI") {
+        if(me == "txxETCCDI") {
           boots <- rbind(boots, cbind(firstdecade = (c1 - h),
                                       seconddecade = (c2 - h)))
         } else{
