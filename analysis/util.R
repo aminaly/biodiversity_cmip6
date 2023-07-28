@@ -176,7 +176,7 @@ mod_agreement <- function(extreme_data, measures, sites, reps) {
   ## bootstrap each site
   for(m in 1:length(measures)) {
     me <- measures[m]
-    print(measure)
+    print(me)
     
     ## pull this measure
     hist <- extreme_data %>% 
