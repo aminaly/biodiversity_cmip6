@@ -175,20 +175,20 @@ mod_agreement <- function(extreme_data, measures, sites, reps) {
   model_agreement <- c()
   ## bootstrap each site
   for(m in 1:length(measures)) {
-    measure <- measures[m]
+    me <- measures[m]
     print(measure)
     
     ## pull this measure
     hist <- extreme_data %>% 
-      filter(measure == measure,
+      filter(measure == me,
              scenario == "historical",
              year %in% c(1995:2014))  
     comp1 <- extreme_data %>% 
-      filter(measure == measure,
+      filter(measure == me,
              year %in% c(2015:2025)) %>% 
       filter(if(ERA != "") scenario == ERA)
     comp2 <- extreme_data %>% 
-      filter(measure == measure,
+      filter(measure == me,
              year %in% c(2026:2036)) %>% 
       filter(if(ERA != "") scenario == ERA)
     
@@ -222,40 +222,29 @@ mod_agreement <- function(extreme_data, measures, sites, reps) {
       }
       
       ## using the 1000 boots of all 4, return summary row for this site and add to model agreement
-      #low <- apply(boots, 2, quantile, c(0.025), na.rm = T)
-      
-      #high <- apply(boots, 2, quantile, c(0.975), na.rm = T)
+      low <- apply(boots, 2, quantile, c(0.025), na.rm = T)
+
+      high <- apply(boots, 2, quantile, c(0.975), na.rm = T)
       
       mid <- apply(boots, 2, quantile, c(.5), na.rm = T)
       
-      #over0 <- apply(boots, 2, function(x) {sum(x > 0)/ reps})
+      over0 <- apply(boots, 2, function(x) {sum(x > 0)/ reps})
       
-      #under0 <- apply(boots, 2, function(x) {sum(x < 0)/ reps})
+      under0 <- apply(boots, 2, function(x) {sum(x < 0)/ reps})
       
-      #over100 <- apply(boots, 2, function(x) {sum(abs(x) > 1)/ reps})
-      
-      #model_agreement <- rbind(model_agreement,
-      #                         cbind(SitRecID = site, measure = measure, low, high,
-      #                               over0, under0, over100))
+      over100 <- apply(boots, 2, function(x) {sum(abs(x) > 1)/ reps})
       
       model_agreement <- rbind(model_agreement,
-                               cbind(SitRecID = site, measure = measure, mid))
+                               cbind(SitRecID = site, measure = measure, low, high,
+                                     over0, under0, over100))
+      
       
     }
     
     
   }
   
-  write.csv(model_agreement, paste0("./processed_data/model_agreement_", measures, ".csv"))
-  
-  model_agreement <- model_agreement %>%
-    mutate(confidence = ifelse(over0 >= .99 | under0 >= .99, "virtually certain",
-                               ifelse(over0 >= .9 | under0 >= .9, "very likely",
-                                      ifelse(over0 >= .66 | under0 >= .66, "likely",
-                                             ifelse(over0 >= .33 | under0 >= .33, "neither",
-                                                    "unlikely"))))) %>%
-    mutate(confidence = fct_relevel(confidence, c("unlikely", "neither", "likely", "very likely", "virtually certain")))
-  
-  write.csv(model_agreement, "./processed_data/model_agreement_50.csv")
+  write.csv(model_agreement, paste0("./processed_data/model_agreement.csv"))
+
   return(model_agreement)
 }
