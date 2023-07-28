@@ -235,7 +235,7 @@ mod_agreement <- function(extreme_data, measures, sites, reps) {
       over100 <- apply(boots, 2, function(x) {sum(abs(x) > 1)/ reps})
       
       model_agreement <- rbind(model_agreement,
-                               cbind(SitRecID = site, measure = measure, low, high,
+                               cbind(SitRecID = site, measure = me, low, high,
                                      over0, under0, over100))
       
       
