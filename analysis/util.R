@@ -244,7 +244,7 @@ mod_agreement <- function(extreme_data, measures, sites, reps) {
     
   }
   
-  write.csv(model_agreement, paste0("./processed_data/model_agreement.csv"))
+  write.csv(model_agreement, paste0("./processed_data/model_agreement", me, ".csv"))
 
   return(model_agreement)
 }
