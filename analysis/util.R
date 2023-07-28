@@ -236,7 +236,7 @@ mod_agreement <- function(extreme_data, measures, sites, reps) {
       
       model_agreement <- rbind(model_agreement,
                                cbind(SitRecID = site, measure = me, low, high,
-                                     over0, under0, over100))
+                                     mid, over0, under0, over100))
       
       
     }
