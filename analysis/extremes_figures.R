@@ -54,143 +54,149 @@ kba_geometry <- st_read(dsn = "./processed_data/kba/KBAsGlobal_2022_September_02
 pas <- st_read(dsn = "./processed_data/wdpa/clean_wdpa_terrestrial.shp")
 ndvi <- read.csv("./processed_data/ndvi/ndvi_pa_ovl.csv")
 
-## fix column names 
-coln <- c("SitRecID", "Region", "Country", "ISO3", "NatName", "IntName", "FinCode", 
-          "SitLat", "SitLong", "GISArea", "IbaStatus", "KBAStatus", 
-          "AzeStatus", "AddedDate", "ChangeDate", "Source", "DelTxt",
-          "DelGeom", "KBA_Quality", "Shape_Long", "Shape_Area", "LegacyKBA", "Criteria",
-          "original_area", "kba_notes", "akba", "class", "geometry")
-names(kba_geometry) <- coln
-
-#### Create plot datasets ----
-#### get KBAs in this country and current protections ----
-kbas <- cummulative_kba(kba_protected_area, years = c(2022), level ="kba")
-kbas <- kbas %>% dplyr::select(SitRecID, kba, Country, cum_year = year,
-                                       cum_overlap, cum_percPA) %>%
-  mutate(protected = ifelse(cum_percPA < 2, "NP", ifelse(cum_percPA >= 98, "FP", "P")))
-kbas <- left_join(kba_class %>% filter(ISO == COUNTRY, Type == TYPE),
-                  kbas, by = c("Country", "SitRecID"))
-kbas <- kbas %>% mutate(climate_threat = ifelse(SitRecID %in% ids, T, F))
-kba_geometry <- kba_geometry %>% filter(ISO3 == COUNTRY)
-
-#### create dataset of extreme indexes (by kba) ----
-extreme_data <- c()
-if(file.exists("./processed_data/extremes_kbas/all_plot_data.csv")) {
-  extreme_data <- read.csv("./processed_data/extremes_kbas/all_plot_data.csv")  
-} else {
-  data_list <- list.files("./processed_data/extremes_kbas/", full.names = T, pattern = paste(indexes, collapse = "|"))
-  for(file in data_list) {
-    data <- read_csv(file)[,-1]
-    data <- data %>% filter(SitRecID %in% kbas$SitRecID) %>% 
-      mutate(year = year(date), #year_group = cut(year, 8, labels = F),
-             scenario = str_split(source, "_")[[1]][4]) %>% select(-source)
-    extreme_data <- rbind(extreme_data, data)
+  ## fix column names 
+  coln <- c("SitRecID", "Region", "Country", "ISO3", "NatName", "IntName", "FinCode", 
+            "SitLat", "SitLong", "GISArea", "IbaStatus", "KBAStatus", 
+            "AzeStatus", "AddedDate", "ChangeDate", "Source", "DelTxt",
+            "DelGeom", "KBA_Quality", "Shape_Long", "Shape_Area", "LegacyKBA", "Criteria",
+            "original_area", "kba_notes", "akba", "class", "geometry")
+  names(kba_geometry) <- coln
+  
+  #### Create plot datasets ----
+  #### get KBAs in this country and current protections ----
+  kbas <- cummulative_kba(kba_protected_area, years = c(2022), level ="kba")
+  kbas <- kbas %>% dplyr::select(SitRecID, kba, Country, cum_year = year,
+                                         cum_overlap, cum_percPA) %>%
+    mutate(protected = ifelse(cum_percPA < 2, "NP", ifelse(cum_percPA >= 98, "FP", "P")))
+  kbas <- left_join(kba_class %>% filter(ISO == COUNTRY, Type == TYPE),
+                    kbas, by = c("Country", "SitRecID"))
+  kbas <- kbas %>% mutate(climate_threat = ifelse(SitRecID %in% ids, T, F))
+  kba_geometry <- kba_geometry %>% filter(ISO3 == COUNTRY)
+  
+  #### create dataset of extreme indexes (by kba) ----
+  extreme_data <- c()
+  if(file.exists("./processed_data/extremes_kbas/all_plot_data.csv")) {
+    extreme_data <- read.csv("./processed_data/extremes_kbas/all_plot_data.csv")  
+  } else {
+    data_list <- list.files("./processed_data/extremes_kbas/", full.names = T, pattern = paste(indexes, collapse = "|"))
+    for(file in data_list) {
+      data <- read_csv(file)[,-1]
+      data <- data %>% filter(SitRecID %in% kbas$SitRecID) %>% 
+        mutate(year = year(date), #year_group = cut(year, 8, labels = F),
+               scenario = str_split(source, "_")[[1]][4]) %>% select(-source)
+      extreme_data <- rbind(extreme_data, data)
+    }
+    write.csv(extreme_data, "./processed_data/extremes_kbas/all_plot_data.csv")
   }
-  write.csv(extreme_data, "./processed_data/extremes_kbas/all_plot_data.csv")
-}
-
-extreme_data <- extreme_data %>% mutate(climate_threat = ifelse(SitRecID %in% ids, "Y", "N"))
-
-hist <- extreme_data %>% 
-  filter(scenario == "historical",
-         year %in% c(1995:2014)) %>% 
-  group_by(SitRecID, scenario, measure, climate_threat) %>%
-  summarize(standard_dev = sd(mean, na.rm = T), mean_index = median(mean, na.rm = T)) %>%
-  mutate(year_group = "hist")
-
-comp <- extreme_data %>% 
-  filter(year %in% c(2015:2036)) %>% 
-  mutate(year_group = cut(year, 2, labels = c("first", "second"))) %>%
-  group_by(SitRecID, scenario, year_group, measure) %>%
-  summarize(standard_dev = sd(mean, na.rm = T), mean_index = median(mean, na.rm = T)) %>%
-  pivot_wider(id_cols = c(SitRecID, scenario, measure), 
-              names_from = year_group, values_from = c("standard_dev", "mean_index")) %>%
-  filter(if(ERA != "") scenario == ERA) %>% ungroup %>% select(-scenario)
-
-extreme_comp_data <- left_join(hist %>% ungroup %>% dplyr::select(-scenario), 
-                               comp, by = c("SitRecID", "measure")) %>%
-  mutate(diff_first = ifelse(measure %in% c("tn90pETCCDI", "tx90pETCCDI", "txxETCCDI"), 
-                             mean_index_first - mean_index,
-                             ((mean_index_first - mean_index)/mean_index)*100),
-         diff_abs_first = mean_index_first - mean_index,
-         diff_abs_second = mean_index_second - mean_index,
-         diff_second = ifelse(measure %in% c("tn90pETCCDI", "tx90pETCCDI", "txxETCCDI"), 
-                              mean_index_second - mean_index,
-                              ((mean_index_second - mean_index)/mean_index)*100))
-
-categories <- as.data.frame(cbind(measure = unique(extreme_comp_data$measure),
-                                  category = c("precip", "precip", "temp", "temp")))
-
-extreme_comp_data <- left_join(extreme_comp_data, categories, by = "measure")
-
-
-#### create dataset of goverance types ----
-intersections <- st_intersects(kba_geometry, pas)
-governance <- c()
-for(i in 1:nrow(intersections)) {
-  indeces <- pas %>% slice(intersections[[i]])
-  ifelse(nrow(indeces) == 0, WDPA <- NA, WDPA <- indeces %>% pull(WDPAID))
-  governance <- rbind(governance,
-                    cbind(SitRecID = kba_geometry[i,] %>% st_drop_geometry() %>% pull(SitRecID),
-                          WDPAID = WDPA))
-}
-governance <- as.data.frame(governance)
-
-governance <- left_join(kbas %>% filter(!is.na(kba)), governance, by = "SitRecID")
-governance <- left_join(governance, ndvi %>%
-                          filter(year == 2022, ISO3 == COUNTRY) %>%
-                          select(WDPAID, GOV_TYPE, DESIG_TYPE),
-                        by = c("WDPAID"))
-
-
-#### Model Agreement ----
-if(file.exists("./processed_data/model_agreement/model_agreement.csv")) {
-  model_agreement <- read.csv("./processed_data/model_agreement/model_agreement.csv")
-} else {
-  ## as in Singh et al 2014 and Horton et al. 2014 which use IPCC thresholds of 66% agreement 
+  
   extreme_data <- extreme_data %>% mutate(climate_threat = ifelse(SitRecID %in% ids, "Y", "N"))
-  measures <- unique(extreme_data$measure)[measurerep]
-  sites <- unique(extreme_data$SitRecID)
-  reps <- 1000
-  model_agreement <- mod_agreement(extreme_data, measures, sites, reps)
+  
+  hist <- extreme_data %>% 
+    filter(scenario == "historical",
+           year %in% c(1995:2014)) %>% 
+    group_by(SitRecID, scenario, measure, climate_threat) %>%
+    summarize(standard_dev = sd(mean, na.rm = T), mean_index = median(mean, na.rm = T)) %>%
+    mutate(year_group = "hist")
+  
+  comp <- extreme_data %>% 
+    filter(year %in% c(2015:2036)) %>% 
+    mutate(year_group = cut(year, 2, labels = c("first", "second"))) %>%
+    group_by(SitRecID, scenario, year_group, measure) %>%
+    summarize(standard_dev = sd(mean, na.rm = T), mean_index = median(mean, na.rm = T)) %>%
+    pivot_wider(id_cols = c(SitRecID, scenario, measure), 
+                names_from = year_group, values_from = c("standard_dev", "mean_index")) %>%
+    filter(if(ERA != "") scenario == ERA) %>% ungroup %>% select(-scenario)
+  
+  extreme_comp_data <- left_join(hist %>% ungroup %>% dplyr::select(-scenario), 
+                                 comp, by = c("SitRecID", "measure")) %>%
+    mutate(diff_first = ifelse(measure %in% c("tn90pETCCDI", "tx90pETCCDI", "txxETCCDI"), 
+                               mean_index_first - mean_index,
+                               ((mean_index_first - mean_index)/mean_index)*100),
+           diff_abs_first = mean_index_first - mean_index,
+           diff_abs_second = mean_index_second - mean_index,
+           diff_second = ifelse(measure %in% c("tn90pETCCDI", "tx90pETCCDI", "txxETCCDI"), 
+                                mean_index_second - mean_index,
+                                ((mean_index_second - mean_index)/mean_index)*100))
+  
+  categories <- as.data.frame(cbind(measure = unique(extreme_comp_data$measure),
+                                    category = c("precip", "precip", "temp", "temp")))
+  
+  extreme_comp_data <- left_join(extreme_comp_data, categories, by = "measure")
   
   
-  model_agreement <- model_agreement %>%
-    mutate(confidence = ifelse(over0 >= .99 | under0 >= .99, "virtually certain",
-                               ifelse(over0 >= .9 | under0 >= .9, "very likely",
-                                      ifelse(over0 >= .66 | under0 >= .66, "likely",
-                                             ifelse(over0 >= .33 | under0 >= .33, "neither",
-                                                    "unlikely"))))) %>%
-    mutate(confidence = fct_relevel(confidence, c("unlikely", "neither", "likely", "very likely", "virtually certain")))
-}
-
-#### measures of change in climate hazard ----
-
-#get zscore and normalized value (divided by largest in group)
-climate_hazard <- extreme_comp_data %>% group_by(measure) %>%
-  mutate(z_score_hist = (mean_index - mean(mean_index)) / sd(mean_index), 
-         z_score_first = (mean_index_first - mean(mean_index_first)) / sd(mean_index_first),
-         z_score_second = (mean_index_second - mean(mean_index_second)) / sd(mean_index_second)) %>% ##zscore of this value within the distribution of the measure in the respective decade
-  mutate(normalized_hist = mean_index/max(mean_index),
-         normalized_first = mean_index_first/max(mean_index_first),
-         normalized_second = mean_index_second/max(mean_index_second)) %>% ## normalized data by dividing by the max value
-  ungroup %>% select(SitRecID, measure, z_score_hist, z_score_first, z_score_second,
-                     normalized_hist, normalized_first, normalized_second)
-
-## for each site, get the euclidian distance between the zscore and normalized values from the first decade to the second decade
-climate_hazard_zscore <-  climate_hazard %>% 
-  group_by(SitRecID) %>% summarize(zscore_euclid_climate_first = dist(rbind(z_score_hist,z_score_first))[1],
-                                   zscore_euclid_climate_second = dist(rbind(z_score_hist,z_score_second))[1])
-
-climate_hazard_normalized <-  climate_hazard %>% 
-  group_by(SitRecID) %>% summarize(normalized_euclid_climate_first = dist(rbind(normalized_hist,normalized_first))[1],
-                                   normalized_euclid_climat_second = dist(rbind(normalized_hist,normalized_second))[1])
+  #### create dataset of goverance types ----
+  intersections <- st_intersects(kba_geometry, pas)
+  governance <- c()
+  for(i in 1:nrow(intersections)) {
+    indeces <- pas %>% slice(intersections[[i]])
+    ifelse(nrow(indeces) == 0, WDPA <- NA, WDPA <- indeces %>% pull(WDPAID))
+    governance <- rbind(governance,
+                      cbind(SitRecID = kba_geometry[i,] %>% st_drop_geometry() %>% pull(SitRecID),
+                            WDPAID = WDPA))
+  }
+  governance <- as.data.frame(governance)
+  
+  governance <- left_join(kbas %>% filter(!is.na(kba)), governance, by = "SitRecID")
+  governance <- left_join(governance, ndvi %>%
+                            filter(year == 2022, ISO3 == COUNTRY) %>%
+                            select(WDPAID, GOV_TYPE, DESIG_TYPE),
+                          by = c("WDPAID"))
+  
+  
+  #### Model Agreement ----
+  if(file.exists("./processed_data/model_agreement/model_agreement.csv")) {
+    model_agreement <- read.csv("./processed_data/model_agreement/model_agreement.csv")
+  } else {
+    ## as in Singh et al 2014 and Horton et al. 2014 which use IPCC thresholds of 66% agreement 
+    extreme_data <- extreme_data %>% mutate(climate_threat = ifelse(SitRecID %in% ids, "Y", "N"))
+    measures <- unique(extreme_data$measure)[measurerep]
+    sites <- unique(extreme_data$SitRecID)
+    reps <- 1000
+    model_agreement <- mod_agreement(extreme_data, measures, sites, reps)
+    
+    
+    model_agreement <- model_agreement %>%
+      mutate(confidence = ifelse(over0 >= .99 | under0 >= .99, "virtually certain",
+                                 ifelse(over0 >= .9 | under0 >= .9, "very likely",
+                                        ifelse(over0 >= .66 | under0 >= .66, "likely",
+                                               ifelse(over0 >= .33 | under0 >= .33, "neither",
+                                                      "unlikely"))))) %>%
+      mutate(confidence = fct_relevel(confidence, c("unlikely", "neither", "likely", "very likely", "virtually certain")))
+  }
+  
+  #### measures of change in climate hazard ----
+  
+  #get zscore and normalized value (divided by largest in group)
+  climate_hazard <- extreme_comp_data %>% group_by(measure) %>%
+    mutate(z_score_hist = (mean_index - mean(mean_index)) / sd(mean_index), 
+           z_score_first = (mean_index_first - mean(mean_index_first)) / sd(mean_index_first),
+           z_score_second = (mean_index_second - mean(mean_index_second)) / sd(mean_index_second)) %>% ##zscore of this value within the distribution of the measure in the respective decade
+    mutate(normalized_hist = mean_index/max(mean_index),
+           normalized_first = mean_index_first/max(mean_index_first),
+           normalized_second = mean_index_second/max(mean_index_second)) %>% ## normalized data by dividing by the max value
+    ungroup %>% select(SitRecID, measure, z_score_hist, z_score_first, z_score_second,
+                       normalized_hist, normalized_first, normalized_second)
+  
+  ## for each site, get the euclidian distance between the zscore and normalized values from the first decade to the second decade
+  climate_hazard_zscore <-  climate_hazard %>% 
+    group_by(SitRecID) %>% summarize(zscore_euclid_climate_first = dist(rbind(z_score_hist,z_score_first))[1],
+                                     zscore_euclid_climate_second = dist(rbind(z_score_hist,z_score_second))[1])
+  
+  climate_hazard_normalized <-  climate_hazard %>% 
+    group_by(SitRecID) %>% summarize(normalized_euclid_climate_first = dist(rbind(normalized_hist,normalized_first))[1],
+                                     normalized_euclid_climat_second = dist(rbind(normalized_hist,normalized_second))[1])
 
 #### measures of vulnerability (distance to other KBAs and protection) ----
 
-climate_vulnerability <- st_nn(kba_geometry[1:5,], pas[1:5,], k = 2, parallel = 5, returnDist = T)$dist
+climate_vulnerability <- st_nn(kba_geometry, pas, k = num_k, parallel = 5, returnDist = T)$dist
 cv <- unlist(lapply(climate_vulnerability, FUN = mean))
-saveRDS(climate_vulnerability, )
+cv <- cbind(kba_geometry$SitRecID %>% st_drop_geometry(), cv)
+saveRDS(cv, "./processed_data/kba_dist_pas.rds")
+
+climate_vulnerability <- st_nn(kba_geometry, kba_geometry, k = num_k + 1 , parallel = 5, returnDist = T)$dist
+cv <- unlist(lapply(climate_vulnerability, FUN = mean))
+cv <- cbind(kba_geometry$SitRecID %>% st_drop_geometry(), cv)
+saveRDS(cv, "./processed_data/kba_dist_kbas.rds")
 
 #### rank climate hazard based on percentile changes ----
 model_agreement_rank_first <- left_join(model_agreement %>% filter(X == "firstdecade"), 
