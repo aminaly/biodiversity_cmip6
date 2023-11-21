@@ -19,6 +19,7 @@ library(quantreg)
 library(jtools)
 library(sf)
 library(forcats)
+library(nngeo)
 #library(ggpattern)
 #library(ggridges)
 #library(gridExtra)
@@ -41,6 +42,7 @@ ids <- c(7076, 7086, 7090, 7092, 7095, 7097, 7100, 7101, 7102, 7103, 7107,
          7116, 7117, 7124, 7131, 7132, 7136, 7139, 7142, 7147, 7149, 7152, 
          7153, 7154, 7155, 7157, 7158, 7159, 7161, 7162, 7163, 7164, 7165,
          7166, 7168, 7170, 7171, 7172, 7174, 7175, 32050, 32058, 44661, 44671)
+num_k <- 5 # set number of locations to consider in vulnerability
 
 #### Get data ----
 world <- st_read(dsn = "./raw_data/WB_countries_Admin0_10m/WB_countries_Admin0_10m.shp", stringsAsFactors = F, crs = 4326) 
@@ -61,7 +63,7 @@ coln <- c("SitRecID", "Region", "Country", "ISO3", "NatName", "IntName", "FinCod
 names(kba_geometry) <- coln
 
 #### Create plot datasets ----
-## get KBAs in this country and current protections
+#### get KBAs in this country and current protections ----
 kbas <- cummulative_kba(kba_protected_area, years = c(2022), level ="kba")
 kbas <- kbas %>% dplyr::select(SitRecID, kba, Country, cum_year = year,
                                        cum_overlap, cum_percPA) %>%
@@ -71,7 +73,7 @@ kbas <- left_join(kba_class %>% filter(ISO == COUNTRY, Type == TYPE),
 kbas <- kbas %>% mutate(climate_threat = ifelse(SitRecID %in% ids, T, F))
 kba_geometry <- kba_geometry %>% filter(ISO3 == COUNTRY)
 
-## create dataset of extreme indexes (by kba)
+#### create dataset of extreme indexes (by kba) ----
 extreme_data <- c()
 if(file.exists("./processed_data/extremes_kbas/all_plot_data.csv")) {
   extreme_data <- read.csv("./processed_data/extremes_kbas/all_plot_data.csv")  
@@ -122,28 +124,28 @@ categories <- as.data.frame(cbind(measure = unique(extreme_comp_data$measure),
 extreme_comp_data <- left_join(extreme_comp_data, categories, by = "measure")
 
 
-## create dataset of goverance types
-# intersections <- st_intersects(kba_geometry, pas)
-# governance <- c()
-# for(i in 1:nrow(intersections)) {
-#   indeces <- pas %>% slice(intersections[[i]])
-#   ifelse(nrow(indeces) == 0, WDPA <- NA, WDPA <- indeces %>% pull(WDPAID))
-#   governance <- rbind(governance,
-#                     cbind(SitRecID = kba_geometry[i,] %>% st_drop_geometry() %>% pull(SitRecID),
-#                           WDPAID = WDPA))
-# }
-# governance <- as.data.frame(governance)
-# 
-# governance <- left_join(kbas, governance, by = "SitRecID")
-# governance <- left_join(governance, ndvi %>%
-#                           filter(year == 2022, ISO3 == COUNTRY, !is.na(kba)) %>%
-#                           select(WDPAID, GOV_TYPE, DESIG_TYPE),
-#                         by = c("WDPAID"))
+#### create dataset of goverance types ----
+intersections <- st_intersects(kba_geometry, pas)
+governance <- c()
+for(i in 1:nrow(intersections)) {
+  indeces <- pas %>% slice(intersections[[i]])
+  ifelse(nrow(indeces) == 0, WDPA <- NA, WDPA <- indeces %>% pull(WDPAID))
+  governance <- rbind(governance,
+                    cbind(SitRecID = kba_geometry[i,] %>% st_drop_geometry() %>% pull(SitRecID),
+                          WDPAID = WDPA))
+}
+governance <- as.data.frame(governance)
+
+governance <- left_join(kbas %>% filter(!is.na(kba)), governance, by = "SitRecID")
+governance <- left_join(governance, ndvi %>%
+                          filter(year == 2022, ISO3 == COUNTRY) %>%
+                          select(WDPAID, GOV_TYPE, DESIG_TYPE),
+                        by = c("WDPAID"))
 
 
 #### Model Agreement ----
-if(file.exists("./processed_data/model_agreement_50.csv")) {
-  model_agreement <- read.csv("./processed_data/model_agreement.csv")
+if(file.exists("./processed_data/model_agreement/model_agreement.csv")) {
+  model_agreement <- read.csv("./processed_data/model_agreement/model_agreement.csv")
 } else {
   ## as in Singh et al 2014 and Horton et al. 2014 which use IPCC thresholds of 66% agreement 
   extreme_data <- extreme_data %>% mutate(climate_threat = ifelse(SitRecID %in% ids, "Y", "N"))
@@ -162,9 +164,66 @@ if(file.exists("./processed_data/model_agreement_50.csv")) {
     mutate(confidence = fct_relevel(confidence, c("unlikely", "neither", "likely", "very likely", "virtually certain")))
 }
 
+#### measures of change in climate hazard ----
+
+#get zscore and normalized value (divided by largest in group)
+climate_hazard <- extreme_comp_data %>% group_by(measure) %>%
+  mutate(z_score_hist = (mean_index - mean(mean_index)) / sd(mean_index), 
+         z_score_first = (mean_index_first - mean(mean_index_first)) / sd(mean_index_first),
+         z_score_second = (mean_index_second - mean(mean_index_second)) / sd(mean_index_second)) %>% ##zscore of this value within the distribution of the measure in the respective decade
+  mutate(normalized_hist = mean_index/max(mean_index),
+         normalized_first = mean_index_first/max(mean_index_first),
+         normalized_second = mean_index_second/max(mean_index_second)) %>% ## normalized data by dividing by the max value
+  ungroup %>% select(SitRecID, measure, z_score_hist, z_score_first, z_score_second,
+                     normalized_hist, normalized_first, normalized_second)
+
+## for each site, get the euclidian distance between the zscore and normalized values from the first decade to the second decade
+climate_hazard_zscore <-  climate_hazard %>% 
+  group_by(SitRecID) %>% summarize(zscore_euclid_climate_first = dist(rbind(z_score_hist,z_score_first))[1],
+                                   zscore_euclid_climate_second = dist(rbind(z_score_hist,z_score_second))[1])
+
+climate_hazard_normalized <-  climate_hazard %>% 
+  group_by(SitRecID) %>% summarize(normalized_euclid_climate_first = dist(rbind(normalized_hist,normalized_first))[1],
+                                   normalized_euclid_climat_second = dist(rbind(normalized_hist,normalized_second))[1])
+
+#### measures of vulnerability (distance to other KBAs and protection) ----
+
+climate_vulnerability <- st_nn(kba_geometry[1:5,], pas[1:5,], k = 2, parallel = 5, returnDist = T)$dist
+cv <- unlist(lapply(climate_vulnerability, FUN = mean))
+saveRDS(climate_vulnerability, )
+
+#### rank climate hazard based on percentile changes ----
+model_agreement_rank_first <- left_join(model_agreement %>% filter(X == "firstdecade"), 
+                                  kbas %>% select(SitRecID, 
+                                                  percent_protected = cum_percPA),
+                                  by = "SitRecID") %>%
+  pivot_wider(id_cols = c(SitRecID, percent_protected),
+              names_from = measure,
+              values_from = c("mid")) %>%
+  mutate(cdd_rank = percent_rank(abs(cddETCCDI)), txx_rank = percent_rank(abs(txxETCCDI)),
+         r95p_rank = percent_rank(abs(r95pETCCDI)), wsdi_rank = percent_rank(abs(wsdiETCCDI)),
+         protected_rank = percent_rank(desc(percent_protected)),
+         total_rank = cdd_rank + txx_rank + r95p_rank + wsdi_rank) %>% 
+  arrange(desc(total_rank)) %>% mutate(risk_group = cut(total_rank, 6, labels = F))
+  
+model_agreement_rank_second <- left_join(model_agreement %>% filter(X == "seconddecade"), 
+                                         kbas %>% select(SitRecID, 
+                                                         percent_protected = cum_percPA),
+                                         by = "SitRecID") %>%
+  pivot_wider(id_cols = c(SitRecID, percent_protected),
+              names_from = measure,
+              values_from = c("mid")) %>%
+  mutate(cdd_rank = percent_rank(abs(cddETCCDI)), txx_rank = percent_rank(abs(txxETCCDI)),
+         r95p_rank = percent_rank(abs(r95pETCCDI)), wsdi_rank = percent_rank(abs(wsdiETCCDI)),
+         protected_rank = percent_rank(desc(percent_protected)),
+         total_rank = cdd_rank + txx_rank + r95p_rank + wsdi_rank) %>% 
+  arrange(desc(total_rank)) %>% mutate(risk_group = cut(total_rank, 6, labels = F))
+  
+  
 #### Start Plots ----
-#### Figure 1 - Plot protection  ----
 pdf(paste0("./visuals/protection_", td, ".pdf")) ## start pdf up here
+
+#### Figure plot protection  ----
 
 data_i <- left_join(kbas,
                     kba_geometry %>%
@@ -244,7 +303,7 @@ ggplot(data = pas_i) +
   theme_bw()
 
 dev.off()
-#### Figure 2 - Plot 4 climate vars and model agreement ---- 
+#### Figure plot 4 climate vars and model agreement ---- 
 pdf(paste0("./visuals/model_agreement_", td, ".pdf")) ## start pdf up here
 
 ## plot map of all KBAs
@@ -252,8 +311,7 @@ data_i <- left_join(model_agreement,
                     kba_geometry %>%
                       filter(SitRecID %in% unique(data$SitRecID)) %>%
                       select(SitRecID, geometry),
-                    by = "SitRecID") %>% st_set_geometry("geometry") %>%
-  mutate(mid = ifelse(measure == "txxETCCDI", mid, mid*100))
+                    by = "SitRecID") %>% st_set_geometry("geometry")
 
 world_crop <- st_crop(world, xmin = 25, xmax = 33, ymin = -34, ymax = -25)
 
@@ -263,15 +321,16 @@ for(dec in c("firstdecade", "seconddecade")) {
     data_ii <- data_i %>% filter(measure == i, X == dec)
     #data_ii_crop <- st_crop(data_ii, xmin = 25, xmax = 33, ymin = -34, ymax = -25)
     
+    lims <- range(data_i %>% filter(measure == i) %>% pull(mid))
+    
     # ### plot this index's change in the first decade with inset
     print(ggplot(data = data_ii) +
       geom_sf(data = world, size = 0.002, fill = "#e1e7ce") +
       geom_sf(data = data_ii, color = NA, aes(fill = mid)) +
-      scale_fill_continuous(high = "#ef8a62", na.value = "grey") +
+      scale_fill_gradientn(colors = c("#f1b6da", "#de77ae", "#8e0152"), na.value = "grey", limits = lims) +
+      geom_sf(data = world, size = 0.002, fill = NA) +
       ggtitle(paste(dec, i)) +
       coord_sf(ylim = c(-22, -35), xlim = c(15, 35)) +
-    #   geom_rect(aes(xmin = 25, xmax = 33, ymin = -34, ymax = -25),
-    #             color = "purple", linewidth = 0.2, inherit.aes = FALSE, fill = NA) +
       labs(fill = "Average Change") +
       theme_bw())
     # 
@@ -285,16 +344,16 @@ for(dec in c("firstdecade", "seconddecade")) {
     #   theme_bw())
     
     ## plot the model certainty with inset
-    print(ggplot(data = data_ii) +
-      geom_sf(data = world, size = 0.002, fill = "#e1e7ce") +
-      geom_sf(data = data_ii, color = NA, aes(fill = confidence)) +
-      #scale_fill_manual(values = c("#d0d1e6", "#67a9cf", "#3690c0", "02818a", "016c59")) +
-      ggtitle(paste("Model Agreement", i, dec)) +
-      coord_sf(ylim = c(-22, -35), xlim = c(15, 35)) +
-      #geom_rect(aes(xmin = 25, xmax = 33, ymin = -34, ymax = -25), 
-      #          color = "purple", linewidth = 0.2, inherit.aes = FALSE, fill = NA) +
-      labs(fill = "Model Confidence") +
-      theme_bw())
+    # print(ggplot(data = data_ii) +
+    #   geom_sf(data = world, size = 0.002, fill = "#e1e7ce") +
+    #   geom_sf(data = data_ii, color = NA, aes(fill = confidence)) +
+    #   #scale_fill_manual(values = c("#d0d1e6", "#67a9cf", "#3690c0", "02818a", "016c59")) +
+    #   ggtitle(paste("Model Agreement", i, dec)) +
+    #   coord_sf(ylim = c(-22, -35), xlim = c(15, 35)) +
+    #   #geom_rect(aes(xmin = 25, xmax = 33, ymin = -34, ymax = -25), 
+    #   #          color = "purple", linewidth = 0.2, inherit.aes = FALSE, fill = NA) +
+    #   labs(fill = "Model Confidence") +
+    #   theme_bw())
     
     # print(ggplot(data = data_ii_crop) +
     #   geom_sf(data = world_crop, size = 0.002, fill = "#e1e7ce") +
@@ -305,13 +364,13 @@ for(dec in c("firstdecade", "seconddecade")) {
     #   labs(fill = "Model Confidence") +
     #   theme_bw())
     
-    print(ggplot(data = data_ii,
-           aes(x = measure, y = mid, ymin = low, ymax = high)) +
-      geom_point(position = position_dodge2(1)) +
-      geom_errorbar(width = 1, position = position_dodge2(1)) +
-      labs(x = "Index", y = "Estimated Range of Change Across All Models and KBAs",
-           title = paste0("Average 95% CI of Change for all KBAs")) +
-      theme_bw())
+    # print(ggplot(data = data_ii %>% arrange(mid),
+    #        aes(x = measure, y = mid, ymin = low, ymax = high)) +
+    #   geom_point(position = position_dodge2(1)) +
+    #   geom_errorbar(width = 1, position = position_dodge2(1)) +
+    #   labs(x = "Index", y = "Estimated Range of Change Across All Models and KBAs",
+    #        title = paste0("Average 95% CI of Change for all KBAs")) +
+    #   theme_bw())
 
     print(ggplot(data = data_ii %>% st_drop_geometry(), aes(x = measure, group = fct_rev(confidence))) +
             geom_bar(position = "dodge", aes(fill = factor(confidence))) +
@@ -319,7 +378,7 @@ for(dec in c("firstdecade", "seconddecade")) {
             geom_text(stat='count', aes(label=..count..), vjust= -1, position = position_dodge(width = .9),
                       hjust = 0) +
             scale_fill_manual(values = c("#01665e", "#02818a", "#3690c0", "67a9cf", "d0d1e6")) +
-            coord_flip() +
+            facet_grid(~.dir) +
             theme_bw())
 
   }
@@ -327,7 +386,27 @@ for(dec in c("firstdecade", "seconddecade")) {
 
 dev.off()
 
-#### Figure 3 high heat (wdsi + txx + climate threat) ----
+pdf(paste0("./visuals/model_agreement_CIs", td, ".pdf")) ## start pdf up here
+
+
+for(ind in 1:length(indexes)) {
+  i <- indexes[ind]
+  data_ii <- data_i %>% filter(measure == i) %>% mutate(ids = as.character(SitRecID)) %>% arrange(mid)
+  
+  print(ggplot(data = data_ii,
+               aes(x = reorder(ids, mid, FUN=mean), y = mid, ymin = low, ymax = high, group = X)) +
+          #geom_point(position = position_dodge2(1), aes(color = X)) +
+          geom_errorbar(width = 1, position = position_dodge2(1), aes(color = X)) +
+          scale_x_discrete(breaks=1:8) +
+          labs(x = "Index", y = "Estimated Range of Change Across All Models and KBAs",
+               title = paste0("Average 95% CI of Change for all KBAs ", i)) +
+          theme_bw())
+  
+}
+
+dev.off()
+
+#### Figure plot high heat (wdsi + txx + climate threat scatterplots) ----
 pdf(paste0("./visuals/f3_scatterplots_", td, ".pdf")) ## start pdf up here
 
 data <- left_join(model_agreement,
@@ -346,27 +425,30 @@ for(dec in c("firstdecade", "seconddecade")) {
     pivot_wider(id_cols = c(SitRecID, climate_threat, protected, percent_protected),
                                    names_from = measure,
                                    values_from = c("mid"))
+  
+  m <- lm(wsdiETCCDI~ txxETCCDI, data = data_piv)
   ## scatterplot with climate threat
-  ggplot(data = data_piv, 
+  print(ggplot(data = data_piv %>% filter(confidence != "unlikely"), 
          aes(x = txxETCCDI, y = wsdiETCCDI)) +
-    ggtitle(paste("Average % Change tx90p + wsdi", dec)) +
+    ggtitle(paste("Average % Change txx + wsdi", dec, "r-squared", round(summary(m)$r.squared, 2))) +
     geom_point(aes(color = climate_threat), size = 2.5) +
     scale_colour_manual(values=c("#f6e8c3", "#01665e")) +
     geom_rug(col=rgb(.5,0,0,alpha=.2)) +
+    geom_abline(intercept = m$coefficients[1], slope = m$coefficients[2], color = "darkblue") +
     xlim(xlims) + ylim(ylims) +
     xlab("% Change in txxETCCDI from `95-14") +
     ylab("% Change in wsdiETCCDI \n from `95-14") +
-    theme_bw()
+    theme_bw())
   
   ## grid data 
-  ggplot(data_piv, aes(x = txxETCCDI, y = wsdiETCCDI)) +
+  print(ggplot(data_piv, aes(x = txxETCCDI, y = wsdiETCCDI)) +
     stat_bin2d(aes(fill = after_stat(count), alpha = after_stat(count)), bins = 4, na.rm = T) +
     scale_fill_gradient(high = "#01665e") +
-    theme_bw()
+    theme_bw())
 }
 
 dev.off()
-#### Figure 4plot wet /dry (cdd, cwd, txx) ----
+#### Figure plot wet /dry (cdd, txx + climate threat scatterplots ) ----
 pdf(paste0("./visuals/f4_scatterplots_", td, ".pdf")) ## start pdf up here
 
 xlims <- range(data %>% filter(measure == "cddETCCDI") %>% pull(mid))
@@ -377,25 +459,76 @@ for(dec in c("firstdecade", "seconddecade")) {
     pivot_wider(id_cols = c(SitRecID, climate_threat, protected, percent_protected),
                 names_from = measure,
                 values_from = c("mid"))
- 
+  m <- lm(wsdiETCCDI~ txxETCCDI, data = data_piv)
+  
    ## scatterplot with climate threat
-  ggplot(data = data_piv, 
+  print(ggplot(data = data_piv, 
          aes(x = cddETCCDI, y = r95pETCCDI)) +
-    ggtitle(paste("Average % Change tx90p + wsdi", dec)) +
+    ggtitle(paste("Average % Change cdd + r95p", dec, "r-squared", round(summary(m)$r.squared, 2))) +
     geom_point(aes(color = climate_threat)) +
     scale_colour_manual(values=c("#f6e8c3", "#01665e")) +
     geom_rug(col=rgb(.5,0,0,alpha=.2)) +
+    geom_abline(intercept = m$coefficients[1], slope = m$coefficients[2], color = "darkblue") +
     xlim(xlims) + ylim(ylims) +
     xlab("% Change in txxETCCDI from `95-14") +
     ylab("% Change in wsdiETCCDI \n from `95-14") +
-    theme_bw()
+    theme_bw())
   
   ## grid data 
-  ggplot(data_piv, aes(x = cddETCCDI, y = r95pETCCDI)) +
+  print(ggplot(data_piv, aes(x = cddETCCDI, y = r95pETCCDI)) +
     stat_bin2d(aes(fill = after_stat(count), alpha = after_stat(count)), bins = 4, na.rm = T) +
     scale_fill_gradient(high = "#01665e") +
-    theme_bw()
+    theme_bw())
 }
+
+dev.off()
+
+
+#### Figure plot risk rank for KBAs ----
+pdf(paste0("./visuals/risk_ranking_", td, ".pdf")) ## start pdf up here
+
+data_i <- left_join(model_agreement_rank_first,
+                    kba_geometry %>%
+                      filter(SitRecID %in% unique(model_agreement_rank_first$SitRecID)) %>%
+                      select(SitRecID, geometry),
+                    by = "SitRecID") %>% st_set_geometry("geometry")
+top10 <- model_agreement_rank_first[120:160,] %>% pull(SitRecID)
+
+# ### plot this index's change in the first decade with inset
+ggplot(data = data_i) +
+  geom_sf(data = world, size = 0.002, fill = "#e1e7ce") +
+  geom_sf(data = data_i, color = NA, aes(fill = risk_group)) +
+  scale_fill_gradientn(colors = c("#d73027", "#8856a7")) +
+  geom_sf(data = data_i %>% filter(SitRecID %in% top10), fill = "orange", size = 0.2) +
+  geom_sf(data = world, size = 0.002, fill = NA) +
+  ggtitle("Combined Ranked Risk 2015-2025") +
+  coord_sf(ylim = c(-22, -35), xlim = c(15, 35)) +
+  labs(fill = "Risk Group") +
+  theme_bw()
+
+write.csv(model_agreement_rank_first[1:10,], "./processed_data/model_agreement/ranking_2015_2025.csv")
+
+data_i <- left_join(model_agreement_rank_second,
+                    kba_geometry %>%
+                      filter(SitRecID %in% unique(model_agreement_rank_first$SitRecID)) %>%
+                      select(SitRecID, geometry),
+                    by = "SitRecID") %>% st_set_geometry("geometry")
+top10 <- model_agreement_rank_second[120:160,] %>% pull(SitRecID)
+
+# ### plot this index's change in the first decade with inset
+ggplot(data = data_i) +
+  geom_sf(data = world, size = 0.002, fill = "#e1e7ce") +
+  geom_sf(data = data_i, color = NA, aes(fill = risk_group)) +
+  scale_fill_gradientn(colors = c("#d73027", "#8856a7")) +
+  geom_sf(data = data_i %>% filter(SitRecID %in% top10), fill = "orange", size = 0.2) +
+  geom_sf(data = world, size = 0.002, fill = NA) +
+  ggtitle("Combined Ranked Risk 2026-2036") +
+  coord_sf(ylim = c(-22, -35), xlim = c(15, 35)) +
+  labs(fill = "Risk Group") +
+  theme_bw()
+
+write.csv(model_agreement_rank_second[1:10,], "./processed_data/model_agreement/ranking_2026_2036.csv")
+
 
 dev.off()
 
@@ -503,6 +636,48 @@ for(index in indexes) {
           theme_bw())
   
 }
+
+dev.off()
+#### Scratch ----
+m <- model_agreement_rank_first[,7:11]
+model_agreement_rank_first$highest_rank <- colnames(m)[apply(m,1,which.max)]
+m <- model_agreement_rank_second[,7:11]
+model_agreement_rank_second$highest_rank <- colnames(m)[apply(m,1,which.max)]
+pdf("visuals/highest_rank.pdf")
+
+data_i <- left_join(model_agreement_rank_first,
+                    kba_geometry %>%
+                      filter(SitRecID %in% unique(model_agreement_rank_first$SitRecID)) %>%
+                      select(SitRecID, geometry),
+                    by = "SitRecID") %>% st_set_geometry("geometry")
+
+# ### plot this index's change in the first decade with inset
+ggplot(data = data_i) +
+  geom_sf(data = world, size = 0.002, fill = "#e1e7ce") +
+  geom_sf(data = data_i, color = NA, aes(fill = highest_rank)) +
+  #scale_fill_gradientn(colors = c("#e0ecf4", "#8856a7")) +
+  geom_sf(data = world, size = 0.002, fill = NA) +
+  ggtitle("Highest Ranked Risk 2015-2025") +
+  coord_sf(ylim = c(-22, -35), xlim = c(15, 35)) +
+  labs(fill = "Risk Group") +
+  theme_bw()
+
+data_i <- left_join(model_agreement_rank_second,
+                    kba_geometry %>%
+                      filter(SitRecID %in% unique(model_agreement_rank_second$SitRecID)) %>%
+                      select(SitRecID, geometry),
+                    by = "SitRecID") %>% st_set_geometry("geometry")
+
+# ### plot this index's change in the first decade with inset
+ggplot(data = data_i) +
+  geom_sf(data = world, size = 0.002, fill = "#e1e7ce") +
+  geom_sf(data = data_i, color = NA, aes(fill = highest_rank)) +
+  #scale_fill_gradientn(colors = c("#e0ecf4", "#8856a7")) +
+  geom_sf(data = world, size = 0.002, fill = NA) +
+  ggtitle("Combined Ranked Risk 2026-2036") +
+  coord_sf(ylim = c(-22, -35), xlim = c(15, 35)) +
+  labs(fill = "Risk Group") +
+  theme_bw()
 
 dev.off()
 # #### Plot maps  ----

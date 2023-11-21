@@ -28,7 +28,12 @@ kbas$akba <- as.numeric(suppressWarnings(tryCatch({st_area(kbas$geometry, byid =
 kbas$kba_notes <- ""
 new_kbas <- c()
 
-intersecs_all <- st_intersects(kbas, sparse = F)
+if(file.exists("./data/intersecs_all.rds")) {
+  intersecs_all <- readRDS("./data/intersecs_all.rds")
+} else {
+  intersecs_all <- st_intersects(kbas, sparse = F)
+  saveRDS(intersecs_all, "./data/intersecs_all.rds")
+}
 
 ## run through intersections
 for(k in 1:nrow(intersecs_all)) {
